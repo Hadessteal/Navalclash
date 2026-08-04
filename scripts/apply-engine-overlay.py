@@ -60,7 +60,7 @@ text = replace_once(text,
     "client source list")
 text = replace_once(text,
     "include_directories(\n\t${PROJECT_BINARY_DIR}\n\t${PROJECT_SOURCE_DIR}\n\t${PROJECT_SOURCE_DIR}/script\n)\n",
-    "include_directories(\n\t${PROJECT_BINARY_DIR}\n\t${PROJECT_SOURCE_DIR}\n\t${PROJECT_SOURCE_DIR}/script\n\t${PROJECT_SOURCE_DIR}/navycraft\n)\n",
+    "include_directories(\n\t${PROJECT_BINARY_DIR}\n\t${PROJECT_SOURCE_DIR}\n\t${PROJECT_SOURCE_DIR}/script\n\t${PROJECT_SOURCE_DIR}/navycraft\n\t${PROJECT_SOURCE_DIR}/client\n)\n",
     "NavyCraft include directory")
 cmake.write_text(text, encoding="utf-8")
 

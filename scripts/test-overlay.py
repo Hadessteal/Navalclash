@@ -27,6 +27,7 @@ def assert_applied_overlay(root: Path) -> None:
     assert cmake.count("${navycraft_SRCS}") == 1
     assert cmake.count("${navycraft_client_SRCS}") == 1
     assert cmake.count("${PROJECT_SOURCE_DIR}/navycraft") == 1
+    assert cmake.count("${PROJECT_SOURCE_DIR}/client") == 1
     assert main_cpp.count('#include "navycraft/construct/construct_handshake.h"') == 1
     assert main_cpp.count('"navycraft-version"') == 2
     assert main_cpp.count('"navycraft-protocol"') == 2
