@@ -1,0 +1,35 @@
+NavyCraft M5G Hotfix 7 — Core Gameplay Rebuild
+================================================
+
+This release replaces the previous inventory and corrects the major test blockers.
+
+Changes:
+- Compact light-grey Minecraft-inspired inventory.
+- Removed the oversized help area, fake equipment panel and trash slot.
+- E opens inventory; the normal inventory key still works.
+- Fast hand digging for all standard NavyCraft block groups.
+- Minecraft chat message format: <Player> message.
+- Familiar commands: /gamemode, /gmc, /gms, /tp, /spawn, /give,
+  /clear and /kill.
+- Commands are case-insensitive, so /NC_KIT works.
+- Development ship, freeship and halfship minimum reduced from 50 blocks to 9.
+- Lua compatibility ship blocks now have physical collision.
+- Ship visuals use interpolated entity movement.
+- Riders use relative add_pos movement rather than repeated absolute teleports.
+- Downward velocity cancellation now correctly uses player:add_velocity.
+- Fixed the E-key undeclared-global error.
+- Compatibility-renderer blocks can be broken by punching.
+- Added /nc_resetship to delete a stuck active test ship.
+
+Important:
+The stock-engine compatibility renderer is still not the final native moving-
+construct implementation. It is intended for basic gameplay testing. The
+complete smooth moving-platform system requires a compiled patched Luanti
+client/server using the included engine overlay.
+
+Installation:
+1. Close Luanti completely.
+2. Replace games\navycraft with this package.
+3. Keep the world folder.
+4. Restart Luanti.
+5. Use /nc_escape immediately if an old saved construct has stale rider state.

@@ -1,0 +1,25 @@
+NavyCraft Native Gate 9 verification
+
+Permanent implementation verified:
+- LocalPlayer pre-physics platform displacement remains before collisionMoveSimple.
+- Stock collision and sneak/ledge correction complete before native finalization.
+- finishNavyCraftLocalPlayerMove executes immediately before setPosition(position).
+- The rider packet and local player position use the same final pose.
+- Protocol 16 requires ConstructFeatureFinalPlayerPose.
+- The Lua runtime refuses native protocols below 16.
+
+Verification results:
+- Overlay fixture applied twice without duplicate hooks.
+- Exact ordering assertion passed: begin -> stock collision -> sneak -> finish -> setPosition.
+- All native core and client/server integration syntax targets compiled with -Werror.
+- Native regression suite passed: 1/1 tests, zero failures.
+- Missing FinalPlayerPose capability rejection test passed.
+- AddressSanitizer and UndefinedBehaviorSanitizer regression pass completed with zero findings.
+- Platform ABI library compiled.
+- Lua syntax validation passed for all game mods.
+- Complete Lua gameplay smoke flow passed with native protocol 16.
+- Workflow and JSON metadata syntax passed.
+
+Not claimed:
+- No complete patched Windows luanti.exe or luantiserver.exe was produced in this environment.
+- No live moving-deck or multiplayer runtime acceptance has been claimed.

@@ -1,0 +1,12 @@
+NavyCraft Milestone 5G
+
+Player presentation and onboarding:
+- guided basic training
+- role-aware bridge HUD
+- integrated station console
+- accessibility and colour-vision settings
+- subtitles and reduced-motion preference
+- server-owned alerts and notification history
+- bridge console, training console and service handbook
+
+Native construct protocol remains capability 11.

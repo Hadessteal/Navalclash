@@ -1,0 +1,28 @@
+NavyCraft M5G Hotfix 3 — Moving-Deck Death-Loop Fix
+========================================================
+
+Includes Hotfixes 1 and 2.
+
+Fixes:
+- Stops the Lua passenger teleporter when the native moving-construct renderer
+  and rider physics are active. The two systems were carrying players twice.
+- Clears remembered Lua passenger anchors on death, respawn, join and leave.
+- Prevents downward velocity from accumulating while supported by a moving
+  deck.
+- Cancels only false engine fall damage while the player is supported by a
+  NavyCraft construct. Weapon, drowning and ordinary off-ship fall damage are
+  not disabled.
+- Automatically performs a short three-stage rider escape after a ship-deck
+  death so stale native contact cannot pull the respawned player back.
+- Adds /nc_escape for manual rider-state recovery.
+- Fixes the Hotfix 2 HUD size vector warnings.
+- Moves construct entity static_save into initial_properties.
+
+Installation:
+1. Close Luanti completely.
+2. Delete or rename the existing games\navycraft folder.
+3. Extract this ZIP directly into the Luanti games folder.
+4. Confirm games\navycraft\game.conf exists.
+5. Restart Luanti before loading the world.
+
+Your existing world may remain in place.

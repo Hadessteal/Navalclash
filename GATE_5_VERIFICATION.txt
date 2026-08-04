@@ -1,0 +1,41 @@
+NavyCraft Native Gate 5 verification result
+============================================
+
+Permanent implementation verified:
+- Native construct protocol 14.
+- Swept per-frame construct collision broad-phase.
+- Conservative prediction for linear and yaw motion.
+- Deterministic candidate ordering.
+- Existing support construct always retained by collision queries.
+- Preferred support-node hysteresis across deck seams.
+- Rider packet codec version 3 with construct-local velocity.
+- Client motion-change and periodic rider packet emission.
+- Server platform-displacement carry before bounded predictive reconciliation.
+- Local rider speed and prediction-age validation.
+- Exact per-tick rider position overwrite removed.
+- No Lua renderer, collision entity, rider teleport or manual Lua construct step.
+
+Results:
+- Native core compiled successfully with warnings treated as errors.
+- Client integration and construct-scene syntax targets compiled successfully.
+- Server integration, simulation and rider syntax targets compiled successfully.
+- Native construct regression suite: 100% passed, zero failures.
+- Broad-phase incoming-construct, distant-rejection and forced-support tests passed.
+- Preferred support-node seam test passed.
+- Rider packet local-velocity round-trip test passed.
+- Platform-neutral ABI library compiled successfully.
+- Overlay applied twice and remained idempotent.
+- Lua game smoke suite passed with native construct protocol 14.
+
+Representative broad-phase benchmark:
+- indexed constructs: 514
+- queries: 20000
+- returned candidates: 30000 total
+- distant constructs rejected while an incoming vessel remained discoverable
+- forced support construct remained discoverable
+
+Distribution status:
+- Permanent source checkpoint only.
+- Not a user test package.
+- Full patched Luanti Windows client/server compile, runtime deck collision and
+  two-client rider synchronization remain release gates.

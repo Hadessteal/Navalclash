@@ -1,0 +1,25 @@
+NavyCraft M5G Hotfix 5 — Minecraft-Style Inventory
+=====================================================
+
+Includes Hotfixes 1–4.
+
+Adds:
+- Minecraft-inspired dark inventory layout.
+- 9-slot hotbar.
+- 3x9 main inventory.
+- 2x2 crafting grid and output slot.
+- Player/equipment panel.
+- Hover tooltips.
+- Selected-item name and NavyCraft details above the hotbar.
+- Trash slot that deletes dropped items.
+- /nc_inventory to reopen the custom inventory.
+- /nc_tooltips to refresh the UI.
+
+Installation:
+1. Close Luanti.
+2. Replace the current games\navycraft folder.
+3. Extract this ZIP directly into the Luanti games folder.
+4. Confirm games\navycraft\game.conf exists.
+5. Restart Luanti.
+
+The normal inventory key opens this interface.

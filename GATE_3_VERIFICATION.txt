@@ -1,0 +1,35 @@
+HISTORICAL RECORD — superseded by Gate 4.
+
+NavyCraft Native Integration — Gate 3 Verification
+====================================================
+
+Permanent implementation completed in this checkpoint:
+- Server-authoritative 60 Hz fixed-step construct simulation.
+- Deterministic overload/substep limits.
+- 20 Hz native transform replication cadence.
+- Client/server construct-network clock synchronization.
+- Clock-synchronized client transform sampling.
+- Native construct update and rider preparation moved before ordinary player physics.
+- Manual Lua construct stepping removed.
+- Native construct protocol advanced to version 12.
+- Temporary Lua hull entity renderer removed from the game source.
+- Lua rider teleport/correction modules removed from the game source.
+- Native-only Lua state adapter added for launch, docking, state mirroring and controls.
+- Windows build workflow changed to build from the real source tree.
+
+Verification performed on 2026-08-04:
+- Native core and all integration syntax targets compiled with warnings treated as errors.
+- Native construct regression suite: 100% passed, 0 failed.
+- Fixed-step pacing, overload bounds and network-clock tests passed.
+- Engine overlay applied twice successfully, verifying idempotence.
+- Lua game smoke suite passed with native construct protocol 12.
+- All game Lua source files passed syntax loading.
+- No temporary construct entity renderer or Lua rider-position code remains in the game package.
+
+Not yet claimed complete:
+- A fully linked Windows Luanti client and dedicated server executable.
+- Native construct collision integrated into the complete LocalPlayer collision sweep.
+- Live two-client multiplayer synchronization testing.
+- A drag-and-drop binary update for the user.
+
+This is a permanent source checkpoint. It is not a gameplay test release.

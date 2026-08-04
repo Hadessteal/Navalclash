@@ -1,0 +1,18 @@
+name: Prototype core
+on:
+  push:
+  pull_request:
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmake -S prototype -B build/prototype -DCMAKE_BUILD_TYPE=Release
+      - run: cmake --build build/prototype --config Release
+      - run: ctest --test-dir build/prototype -C Release --output-on-failure
+      - run: cmake -S platform -B build/platform -DCMAKE_BUILD_TYPE=Release
+      - run: cmake --build build/platform --config Release
+      - run: python scripts/test-overlay.py

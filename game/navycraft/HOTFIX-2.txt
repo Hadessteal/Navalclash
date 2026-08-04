@@ -1,0 +1,22 @@
+NavyCraft M5G Hotfix 2 — HUD Scaling Fix
+============================================
+
+Includes all Hotfix 1 corrections.
+
+Additional correction:
+- Fixes enormous overlapping campaign HUD text on Luanti 5.16.
+- HUD text 'size.x' is a multiplier of the user's font setting, not a
+  pixel font size. The previous values of 16, 18 and 22 made text render
+  roughly 16–22 times normal size.
+- Normal HUD text now uses 1.0x scale.
+- Large-text accessibility mode uses 1.25x scale.
+- Central alerts use 1.2x or 1.45x scale.
+
+Installation:
+1. Close Luanti completely.
+2. Delete or rename the existing games\navycraft folder.
+3. Extract this ZIP directly into the Luanti games folder.
+4. Confirm games\navycraft\game.conf exists.
+5. Restart Luanti and load the same world.
+
+This is a complete replacement game package.

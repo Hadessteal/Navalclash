@@ -1,0 +1,4 @@
+Copyright (c) 2026 Brett Martinelli (development credit: Droopystarfish)
+All rights reserved.
+
+This placeholder commercial-development licence applies only to original NavyCraft game code and media explicitly marked as such. It does not replace or restrict the licences of Luanti or other third-party components.

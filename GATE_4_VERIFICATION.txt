@@ -1,0 +1,36 @@
+NavyCraft Native Gate 4 verification result
+============================================
+
+Permanent implementation verified:
+- Construct protocol 13.
+- Two-phase integration inside LocalPlayer::move.
+- Existing moving-platform displacement before stock world collision.
+- Native moving-hull sweep after stock world collision.
+- Support acquisition only from the completed collision phase.
+- Held jump prevents immediate deck recapture.
+- Native rider state emitted from the final movement result.
+- No Lua renderer, collision entity or rider-position correction.
+
+Results:
+- Native core compiled successfully.
+- Client integration syntax target compiled successfully.
+- Client construct-scene syntax target compiled successfully.
+- Client effects syntax target compiled successfully.
+- Server integration, simulation, rider and interaction syntax targets compiled successfully.
+- Regression suite: 100% passed, zero failures.
+- Benchmark completed successfully.
+- Platform ABI library compiled successfully.
+- Overlay applied twice and remained idempotent.
+- Overlay test found exactly one begin hook and one finish hook in LocalPlayer::move.
+- Lua game smoke suite passed with native construct protocol 13.
+- GitHub Actions workflow YAML parsed successfully.
+
+Distribution work completed:
+- Versioned native base package layout defined.
+- Versioned binary-only drag-and-drop update layout defined.
+- Windows pipeline now produces both archives after a successful full build.
+
+Release status:
+- Permanent source checkpoint only.
+- Not a user test package.
+- The full patched Luanti Windows client/server compile and runtime collision tests remain open.

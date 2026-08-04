@@ -1,0 +1,10 @@
+#pragma once
+
+constexpr unsigned short TOCLIENT_NAVYCRAFT_CONSTRUCT_SECTION = 0x65;
+constexpr unsigned short TOCLIENT_NAVYCRAFT_CONSTRUCT_TRANSFORM = 0x66;
+constexpr unsigned short TOCLIENT_NAVYCRAFT_CONSTRUCT_REMOVE = 0x67;
+constexpr unsigned short TOCLIENT_NAVYCRAFT_CONSTRUCT_RESET = 0x68;
+constexpr unsigned short TOCLIENT_NAVYCRAFT_CONSTRUCT_EFFECT = 0x69;
+constexpr unsigned short TOCLIENT_NAVYCRAFT_CONSTRUCT_PROJECTILE = 0x6A;
+constexpr unsigned short TOCLIENT_NAVYCRAFT_CONSTRUCT_ARTICULATION = 0x6B;
+constexpr unsigned short TOCLIENT_NAVYCRAFT_HANDSHAKE = 0x6C;

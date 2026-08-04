@@ -1,0 +1,40 @@
+NavyCraft Native Gate 7 verification
+
+Permanent feature verified:
+- Native construct protocol 15 / engine 0.7.0 capability handshake.
+- Bounded little-endian handshake codec with magic and wire-version checks.
+- Non-zero connection nonce and build identity validation.
+- Compatible client/server acceptance.
+- Protocol mismatch rejection.
+- Missing moving-hull collision feature rejection.
+- Truncated packet rejection.
+- Client construct, collision, rider and interaction traffic gated until accept.
+- Server replication, rider authority and interactions gated per accepted peer.
+- Full construct snapshot moved from join-time to post-handshake acceptance.
+- Connection reset separated from construct-state reset.
+- New client/server opcode dispatch and packet-factory entries.
+
+Clean verification completed:
+- C++ Release configure and build completed.
+- Warnings treated as errors for native core and all integration syntax targets.
+- Server handshake integration syntax target compiled.
+- Native construct regression test: 100% passed, 0 failed.
+- Broad-phase/navigation/structure benchmark completed.
+- Platform-neutral ABI library built.
+- Exact-source overlay fixture applied twice without duplicate modifications.
+- Python overlay scripts parsed.
+- Every Lua mod parsed where the Lua compiler was available.
+- Complete gameplay smoke flow passed with native protocol 15.
+- No temporary Lua renderer, collision entity, rider teleport or manual ship step restored.
+
+Representative benchmark:
+- constructs: 514
+- player broad-phase queries: 20,000
+- relevant candidates: 30,000
+- possible unfiltered checks avoided: 10,250,000
+
+Honest build boundary:
+The full patched Windows luanti.exe and luantiserver.exe were not linked in this
+environment. Gate 7 is not a player test build. The player-facing gate remains
+closed until both binaries compile and pass process, deck-collision and two-client
+rider synchronization acceptance.

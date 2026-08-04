@@ -1,0 +1,22 @@
+NavyCraft M5G Hotfix 4 — Block Tooltips
+==========================================
+
+Includes Hotfixes 1–3.
+
+Adds:
+- A proper player inventory formspec.
+- Normal Luanti hover tooltips for inventory and hotbar item slots.
+- A selected-item name shown briefly above the hotbar.
+- NavyCraft-specific detail text for hull blocks, helms, components and weight.
+- /nc_tooltips to refresh the interface if another mod or old world state
+  replaces the inventory formspec.
+
+Installation:
+1. Close Luanti.
+2. Replace the current games\navycraft folder with this package.
+3. Extract directly into the Luanti games directory.
+4. Confirm games\navycraft\game.conf exists.
+5. Restart Luanti and load the world.
+
+Hover an item in the inventory to see its tooltip. Changing hotbar slots also
+shows the selected block name for three seconds.

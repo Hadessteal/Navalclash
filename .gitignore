@@ -1,0 +1,14 @@
+/build/
+/_native-build/
+/_tools/
+/NavyCraft-Codex-Handoff-2026-08-04/
+/upstream/
+/artifacts/
+/private-sdks/
+/store-credentials/
+/.idea/
+__pycache__/
+*.pyc
+*.user
+*.suo
+.DS_Store

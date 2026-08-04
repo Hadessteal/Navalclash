@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.20)
+project(navycraft_platform LANGUAGES C CXX)
+add_library(navycraft_platform_null SHARED src/nc_platform_null.cpp)
+target_include_directories(navycraft_platform_null PUBLIC include)
+target_compile_definitions(navycraft_platform_null PRIVATE NC_PLATFORM_BUILD=1)
+set_target_properties(navycraft_platform_null PROPERTIES OUTPUT_NAME "navycraft_platform")

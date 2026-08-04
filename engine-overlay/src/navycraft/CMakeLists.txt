@@ -1,0 +1,53 @@
+# SPDX-License-Identifier: LGPL-2.1-or-later
+set(navycraft_SRCS
+    ${CMAKE_CURRENT_SOURCE_DIR}/construct/dynamic_construct.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/construct/construct_node_state.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/construct/construct_registry.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/construct/construct_simulation.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/construct/construct_network_clock.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/construct/construct_handshake.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/construct/construct_runtime.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/construct/construct_effects.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/construct/construct_projectiles.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/construct/construct_fire_control.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/construct/construct_navigation.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/construct/construct_structure.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/construct/construct_articulation.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/construct/construct_articulated_motion.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/construct/construct_liquids.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/construct/construct_special_nodes.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/construct/construct_articulation_packets.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/construct/construct_interaction.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/construct/construct_interaction_packets.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/construct/construct_database.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/construct/construct_persistence.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/construct/construct_serialization.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/construct/construct_section.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/construct/construct_replication.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/construct/construct_snapshot_buffer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/construct/construct_geometry.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/construct/construct_collision_world.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/construct/platform_contact.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/construct/rider_motion.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/construct/rider_packets.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/construct/moving_hull_collision.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/construct/carried_body.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/construct/construct_packets.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/network/construct_replication_queue.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/server/server_integration.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/server/handshake_integration.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/server/simulation_integration.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/server/rider_integration.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/server/interaction_integration.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/script_api.cpp
+    PARENT_SCOPE
+)
+
+set(navycraft_client_SRCS
+    ${CMAKE_CURRENT_SOURCE_DIR}/construct/construct_mesh.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/construct/client_construct_state.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/client/client_construct_scene.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/client/client_construct_effects.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/client/client_integration.cpp
+    PARENT_SCOPE
+)

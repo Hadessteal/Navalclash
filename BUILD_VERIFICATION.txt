@@ -1,0 +1,26 @@
+NavyCraft Native Gate 9 build verification
+
+Codex hardening pass on 2026-08-04:
+- Exact Luanti commit cloned locally with CRLF conversion disabled.
+- Exact upstream verifier changed to compare pinned Git object IDs.
+- Overlay patcher now adds compiled NavyCraft version/protocol command-line probes.
+- Binary verifier now searches source and build output directories and requires both exes to report version 0.9.0 and protocol 16.
+- Added native dedicated-server startup acceptance script requiring the protocol-16 activation log and rejecting removed Lua renderer markers.
+- Overlay verifier now validates the real patched Luanti tree when supplied.
+- Prototype harness now builds without SQLite by disabling only SQLite persistence tests; all other native prototype tests still run.
+- Windows build script locates Visual Studio bundled CMake/CTest when they are not on PATH.
+- Local Visual Studio Build Tools prototype build/test passed; benchmark passed.
+
+Passed:
+- Native construct core and integration syntax build with warnings as errors.
+- Native regression test suite.
+- ASan/UBSan regression test suite.
+- Broad-phase, navigation and structural benchmark.
+- Platform ABI shared-library build.
+- Overlay idempotence and exact final-pose hook ordering.
+- Python, JSON and GitHub workflow syntax.
+- All Lua mod syntax and complete protocol-16 gameplay smoke flow.
+
+Open hard gate:
+- Compile and link the complete exact Luanti 5.16.1 Windows client and server.
+- Run process startup, moving deck, turning, jumping and two-client synchronization acceptance.

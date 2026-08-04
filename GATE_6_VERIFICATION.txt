@@ -1,0 +1,37 @@
+NavyCraft Native Gate 6 verification
+=====================================
+
+Permanent full-build gate changes:
+- Exact Luanti commit pinned: 5ebd9b57984d5854e0a37fd0125da48e9e59e190
+- 13 modified upstream source files pinned by exact Git blob SHA-1.
+- Client-only construct mesh and client snapshot state removed from shared server sources.
+- Complete Luanti build now enables BUILD_UNITTESTS and BUILD_BENCHMARKS.
+- Packaging is refused when CTest reports zero runnable tests.
+- Configure, compiler, test inventory, and test output are retained.
+- Windows client and server binaries require size, execution, version, and SHA-256 acceptance checks.
+
+Local verification completed:
+- Python source compilation: PASS
+- GitHub Actions YAML parsing: PASS
+- Native C++ configure with warnings as errors: PASS
+- Native C++ build: PASS
+- Construct regression suite: 1/1 PASS
+- Construct benchmark: PASS
+- Overlay application twice: PASS
+- Overlay fixture assertions: PASS
+- Client/server source-list separation assertions: PASS
+
+Benchmark summary:
+- 5,000 nodes
+- 10,000 raycasts, 9,600 hits
+- 514 constructs, 20,000 broad-phase queries
+- 30,000 candidates rather than 10,280,000 unfiltered comparisons
+
+Not completed in this environment:
+- Full Visual Studio Windows build of luanti.exe and luantiserver.exe.
+- Native runtime deck collision test.
+- Two-client synchronization test.
+
+Those stages require a Windows runner with Visual Studio, Windows SDK, vcpkg,
+and access to the exact Luanti source repository. No Windows executable is
+claimed or packaged by Gate 6.

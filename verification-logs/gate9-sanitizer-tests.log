@@ -1,0 +1,8 @@
+Internal ctest changing into directory: /mnt/data/navycraft-native-gate9/build/gate9-sanitized
+Test project /mnt/data/navycraft-native-gate9/build/gate9-sanitized
+    Start 1: construct_core
+1/1 Test #1: construct_core ...................   Passed    0.10 sec
+
+100% tests passed, 0 tests failed out of 1
+
+Total Test time (real) =   0.10 sec

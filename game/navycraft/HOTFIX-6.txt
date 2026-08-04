@@ -1,0 +1,22 @@
+NavyCraft M5G Hotfix 6 — E Inventory Key
+=============================================
+
+Includes Hotfixes 1–5.
+
+Change:
+- Press E to open the Minecraft-style NavyCraft inventory.
+- The action triggers once per key press, so holding E will not repeatedly
+  reopen the screen.
+- The normal Luanti inventory key and /nc_inventory remain available as
+  backups.
+
+Technical note:
+Luanti maps E to the Aux1 control by default. NavyCraft listens for the rising
+edge of Aux1 and opens the custom inventory.
+
+Installation:
+1. Close Luanti completely.
+2. Replace the current games\navycraft folder.
+3. Extract this ZIP directly into the Luanti games folder.
+4. Confirm games\navycraft\game.conf exists.
+5. Restart Luanti.

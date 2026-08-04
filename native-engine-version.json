@@ -1,0 +1,12 @@
+{
+  "product": "NavyCraft Native",
+  "engine_version": "0.9.0",
+  "construct_protocol": 16,
+  "luanti_commit": "5ebd9b57984d5854e0a37fd0125da48e9e59e190",
+  "release_kind": "native-windows-build-candidate",
+  "renderer": "native-only",
+  "gate": 9,
+  "player_collision_pipeline": "LocalPlayer::move final-pose hook after stock sneak/ledge correction, with swept construct broad-phase and predicted rider authority",
+  "build_validation": "protocol-16 final-player-pose negotiation, exact upstream blobs, mandatory full-engine tests, client/server source separation, Windows binary acceptance",
+  "build_id": "NavyCraft-Native-0.9.0"
+}

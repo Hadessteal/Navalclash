@@ -1,0 +1,20 @@
+NavyCraft M5G Hotfix 1
+==========================
+
+Fixes:
+- Defers saved moving-construct entity restoration until after Luanti script
+  initialization. This fixes:
+    Calling this function during script init is disallowed
+    could not restore lua-1: failed to create preview entity 1
+- Replaces deprecated HUD field 'hud_elem_type' with 'type'.
+- Stops tutorial table copying from serializing Lua functions.
+
+Installation:
+1. Close Luanti.
+2. Delete or rename the existing games\navycraft folder.
+3. Extract this ZIP into the Luanti games folder.
+4. Confirm the final path is games\navycraft\game.conf.
+5. Restart Luanti and load the same world.
+
+This is a complete replacement game package, not a mod to place inside
+games\navycraft\mods.

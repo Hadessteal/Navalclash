@@ -1,0 +1,113 @@
+-- The CXX compiler identification is GNU 14.2.0
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found SQLite3: /usr/include (found version "3.46.1")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /mnt/data/gate7_work/navycraft-native-gate7/build/prototype
+[  2%] Building CXX object CMakeFiles/navycraft_script_api_syntax.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/script_api.cpp.o
+[  4%] Building CXX object CMakeFiles/navycraft_construct_core.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/construct/dynamic_construct.cpp.o
+[  6%] Building CXX object CMakeFiles/navycraft_construct_core.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/construct/construct_node_state.cpp.o
+[  8%] Building CXX object CMakeFiles/navycraft_construct_core.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/construct/construct_registry.cpp.o
+[  8%] Built target navycraft_script_api_syntax
+[ 10%] Building CXX object CMakeFiles/navycraft_client_integration_syntax.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/client/client_integration.cpp.o
+[ 12%] Building CXX object CMakeFiles/navycraft_construct_core.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/construct/construct_simulation.cpp.o
+[ 14%] Building CXX object CMakeFiles/navycraft_construct_core.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/construct/construct_network_clock.cpp.o
+[ 16%] Building CXX object CMakeFiles/navycraft_construct_core.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/construct/construct_handshake.cpp.o
+[ 16%] Built target navycraft_client_integration_syntax
+[ 18%] Building CXX object CMakeFiles/navycraft_client_scene_syntax.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/client/client_construct_scene.cpp.o
+[ 20%] Building CXX object CMakeFiles/navycraft_construct_core.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/construct/construct_runtime.cpp.o
+[ 22%] Building CXX object CMakeFiles/navycraft_construct_core.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/construct/construct_effects.cpp.o
+[ 22%] Built target navycraft_client_scene_syntax
+[ 24%] Building CXX object CMakeFiles/navycraft_client_effects_syntax.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/client/client_construct_effects.cpp.o
+[ 24%] Built target navycraft_client_effects_syntax
+[ 26%] Building CXX object CMakeFiles/navycraft_server_integration_syntax.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/server/server_integration.cpp.o
+[ 28%] Building CXX object CMakeFiles/navycraft_construct_core.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/construct/construct_projectiles.cpp.o
+[ 28%] Built target navycraft_server_integration_syntax
+[ 30%] Building CXX object CMakeFiles/navycraft_server_handshake_syntax.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/server/handshake_integration.cpp.o
+[ 30%] Built target navycraft_server_handshake_syntax
+[ 32%] Building CXX object CMakeFiles/navycraft_server_simulation_syntax.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/server/simulation_integration.cpp.o
+[ 32%] Built target navycraft_server_simulation_syntax
+[ 34%] Building CXX object CMakeFiles/navycraft_construct_core.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/construct/construct_fire_control.cpp.o
+[ 36%] Building CXX object CMakeFiles/navycraft_server_rider_syntax.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/server/rider_integration.cpp.o
+[ 38%] Building CXX object CMakeFiles/navycraft_construct_core.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/construct/construct_navigation.cpp.o
+[ 38%] Built target navycraft_server_rider_syntax
+[ 40%] Building CXX object CMakeFiles/navycraft_construct_core.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/construct/construct_structure.cpp.o
+[ 42%] Building CXX object CMakeFiles/navycraft_construct_core.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/construct/construct_articulation.cpp.o
+[ 44%] Building CXX object CMakeFiles/navycraft_construct_core.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/construct/construct_articulated_motion.cpp.o
+[ 46%] Building CXX object CMakeFiles/navycraft_construct_core.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/construct/construct_liquids.cpp.o
+[ 48%] Building CXX object CMakeFiles/navycraft_server_interaction_syntax.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/server/interaction_integration.cpp.o
+[ 48%] Built target navycraft_server_interaction_syntax
+[ 50%] Building CXX object CMakeFiles/navycraft_construct_core.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/construct/construct_special_nodes.cpp.o
+[ 52%] Building CXX object CMakeFiles/navycraft_construct_core.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/construct/construct_articulation_packets.cpp.o
+[ 54%] Building CXX object CMakeFiles/navycraft_construct_core.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/construct/construct_interaction.cpp.o
+[ 56%] Building CXX object CMakeFiles/navycraft_construct_core.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/construct/construct_interaction_packets.cpp.o
+[ 58%] Building CXX object CMakeFiles/navycraft_construct_core.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/construct/construct_database.cpp.o
+[ 60%] Building CXX object CMakeFiles/navycraft_construct_core.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/construct/construct_persistence.cpp.o
+[ 62%] Building CXX object CMakeFiles/navycraft_construct_core.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/construct/construct_serialization.cpp.o
+[ 64%] Building CXX object CMakeFiles/navycraft_construct_core.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/construct/construct_section.cpp.o
+[ 66%] Building CXX object CMakeFiles/navycraft_construct_core.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/construct/construct_replication.cpp.o
+[ 68%] Building CXX object CMakeFiles/navycraft_construct_core.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/construct/construct_snapshot_buffer.cpp.o
+[ 70%] Building CXX object CMakeFiles/navycraft_construct_core.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/construct/construct_geometry.cpp.o
+[ 72%] Building CXX object CMakeFiles/navycraft_construct_core.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/construct/construct_collision_world.cpp.o
+[ 74%] Building CXX object CMakeFiles/navycraft_construct_core.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/construct/platform_contact.cpp.o
+[ 76%] Building CXX object CMakeFiles/navycraft_construct_core.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/construct/rider_motion.cpp.o
+[ 78%] Building CXX object CMakeFiles/navycraft_construct_core.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/construct/rider_packets.cpp.o
+[ 80%] Building CXX object CMakeFiles/navycraft_construct_core.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/construct/moving_hull_collision.cpp.o
+[ 82%] Building CXX object CMakeFiles/navycraft_construct_core.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/construct/carried_body.cpp.o
+[ 84%] Building CXX object CMakeFiles/navycraft_construct_core.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/construct/construct_mesh.cpp.o
+[ 86%] Building CXX object CMakeFiles/navycraft_construct_core.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/construct/construct_packets.cpp.o
+[ 88%] Building CXX object CMakeFiles/navycraft_construct_core.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/construct/client_construct_state.cpp.o
+[ 90%] Building CXX object CMakeFiles/navycraft_construct_core.dir/mnt/data/gate7_work/navycraft-native-gate7/engine-overlay/src/navycraft/network/construct_replication_queue.cpp.o
+[ 92%] Linking CXX static library libnavycraft_construct_core.a
+[ 92%] Built target navycraft_construct_core
+[ 96%] Building CXX object CMakeFiles/navycraft_construct_tests.dir/tests/construct_core_tests.cpp.o
+[ 96%] Building CXX object CMakeFiles/navycraft_construct_benchmark.dir/tests/construct_benchmark.cpp.o
+[ 98%] Linking CXX executable navycraft_construct_benchmark
+[ 98%] Built target navycraft_construct_benchmark
+[100%] Linking CXX executable navycraft_construct_tests
+[100%] Built target navycraft_construct_tests
+Internal ctest changing into directory: /mnt/data/gate7_work/navycraft-native-gate7/build/prototype
+Test project /mnt/data/gate7_work/navycraft-native-gate7/build/prototype
+    Start 1: construct_core
+1/1 Test #1: construct_core ...................   Passed    0.01 sec
+
+100% tests passed, 0 tests failed out of 1
+
+Total Test time (real) =   0.01 sec
+nodes=5000 sections=4 visible_faces=1900 section_packet_bytes=190152 build_partition_ms=1 mesh_packet_ms=2 raycasts=10000 ray_hits=9600 raycast_ms=3 broadphase_constructs=514 broadphase_queries=20000 broadphase_candidates=30000 broadphase_ms=32 navigation_vessels=48 navigation_steps=200 navigation_commands=9600 navigation_ms=17 structural_nodes=5000 structural_fragments=1 structural_ms=18
+-- The C compiler identification is GNU 14.2.0
+-- The CXX compiler identification is GNU 14.2.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Configuring done (0.3s)
+-- Generating done (0.0s)
+-- Build files have been written to: /mnt/data/gate7_work/navycraft-native-gate7/build/platform
+[ 50%] Building CXX object CMakeFiles/navycraft_platform_null.dir/src/nc_platform_null.cpp.o
+[100%] Linking CXX shared library libnavycraft_platform.so
+[100%] Built target navycraft_platform_null
+Applied NavyCraft native Gate 7 engine overlay to /tmp/navycraft-overlay-nzd1_t_s
+Applied NavyCraft native Gate 7 engine overlay to /tmp/navycraft-overlay-nzd1_t_s
+NavyCraft native Gate 7 overlay fixture test passed
+[NavyCraft] nc_core Milestone 3 foundation loaded
+[NavyCraft] native server-authoritative projectile engine enabled
+[NavyCraft] native fire-control and AI gunnery enabled
+[NavyCraft] native articulated machinery enabled
+[NavyCraft] native construct-local liquids and specialised nodes enabled
+[NavyCraft] native structural splitting and wreck buoyancy enabled
+[NavyCraft] complete source-parity gameplay layer Milestone 4N loaded
+[NavyCraft Shipyard] source-derived Shipyard 3.1.5 systems loaded
+[NavyCraft Campaign] Milestone 5G tutorial, HUD, station interfaces, accessibility and notifications loaded
+[NavyCraft] native construct engine protocol 15 active
+NavyCraft Lua game smoke tests passed

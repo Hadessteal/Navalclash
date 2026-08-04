@@ -1,0 +1,212 @@
+name: NavyCraft Gate 9 native Windows build
+
+on:
+  push:
+    branches: [native-luanti-5.16.1]
+    paths:
+      - '.github/workflows/native-windows-build.yml'
+      - 'engine-overlay/**'
+      - 'game/**'
+      - 'prototype/**'
+      - 'scripts/**'
+      - 'BUILD_NATIVE_WINDOWS.ps1'
+      - 'native-engine-version.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-native-build:
+    runs-on: windows-2022
+    timeout-minutes: 180
+    env:
+      LUANTI_COMMIT: 5ebd9b57984d5854e0a37fd0125da48e9e59e190
+      VCPKG_DEFAULT_TRIPLET: x64-windows
+      VCPKG_FEATURE_FLAGS: manifests,binarycaching
+      NAVYCRAFT_ENGINE_VERSION: 0.9.0
+      NAVYCRAFT_PROTOCOL: 16
+
+    steps:
+      - name: Checkout NavyCraft Gate 9 source
+        uses: actions/checkout@v4
+        with:
+          path: navycraft-source
+
+      - name: Checkout exact Luanti 5.16.1 source
+        uses: actions/checkout@v4
+        with:
+          repository: luanti-org/luanti
+          ref: ${{ env.LUANTI_COMMIT }}
+          path: luanti
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Verify exact upstream commit
+        shell: pwsh
+        run: |
+          $actual = git -C luanti rev-parse HEAD
+          if ($actual -ne $env:LUANTI_COMMIT) { throw "Wrong Luanti revision: $actual" }
+          python navycraft-source/scripts/verify-upstream.py "$PWD/luanti"
+
+      - name: Run permanent native regression suite
+        shell: pwsh
+        run: |
+          cmake -S navycraft-source/prototype -B prototype-build -A x64 -DCMAKE_BUILD_TYPE=Release
+          cmake --build prototype-build --config Release --parallel 2
+          ctest --test-dir prototype-build -C Release --output-on-failure
+          python navycraft-source/scripts/test-overlay.py
+          ./prototype-build/Release/navycraft_construct_benchmark.exe
+
+      - name: Apply and verify native engine overlay
+        shell: pwsh
+        run: |
+          python navycraft-source/scripts/apply-engine-overlay.py "$PWD/luanti"
+          python navycraft-source/scripts/test-overlay.py "$PWD/luanti"
+
+      - name: Set vcpkg root
+        shell: pwsh
+        run: |
+          $vcpkg = $env:VCPKG_INSTALLATION_ROOT
+          if (-not $vcpkg) { $vcpkg = 'C:\vcpkg' }
+          if (-not (Test-Path "$vcpkg/vcpkg.exe")) { throw "vcpkg.exe not found at $vcpkg" }
+          "VCPKG_ROOT=$vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Configure complete patched client and server
+        shell: pwsh
+        run: |
+          cmake -S luanti -B luanti-build -A x64 `
+            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" `
+            -DBUILD_CLIENT=TRUE -DBUILD_SERVER=TRUE -DRUN_IN_PLACE=TRUE `
+            -DBUILD_UNITTESTS=TRUE -DBUILD_BENCHMARKS=TRUE `
+            -DVCPKG_APPLOCAL_DEPS=ON -DENABLE_CURSES=OFF -DCMAKE_BUILD_TYPE=Release `
+            2>&1 | Tee-Object native-configure.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Build complete patched client and server
+        shell: pwsh
+        run: |
+          cmake --build luanti-build --config Release --parallel 2 2>&1 | Tee-Object native-build.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Run mandatory complete Luanti tests
+        shell: pwsh
+        run: |
+          $inventory = ctest --test-dir luanti-build -C Release -N 2>&1
+          $inventory | Tee-Object native-test-inventory.log
+          $match = [regex]::Match(($inventory -join "`n"), 'Total Tests:\s+(\d+)')
+          if (-not $match.Success -or [int]$match.Groups[1].Value -lt 1) {
+            throw 'No Luanti tests were configured; refusing to package binaries'
+          }
+          ctest --test-dir luanti-build -C Release --output-on-failure 2>&1 | Tee-Object native-tests.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Verify compiled native binaries
+        shell: pwsh
+        run: |
+          ./navycraft-source/scripts/verify-native-binaries.ps1 `
+            -LuantiSourceDirectory "$PWD/luanti" `
+            -BuildDirectory "$PWD/luanti-build" `
+            -ExpectedVersion $env:NAVYCRAFT_ENGINE_VERSION `
+            -ExpectedProtocol ([int]$env:NAVYCRAFT_PROTOCOL)
+
+      - name: Run native server startup acceptance
+        shell: pwsh
+        run: |
+          ./navycraft-source/scripts/run-native-startup-acceptance.ps1 `
+            -LuantiSourceDirectory "$PWD/luanti" `
+            -BuildDirectory "$PWD/luanti-build" `
+            -GameDirectory "$PWD/navycraft-source/game/navycraft" `
+            -ExpectedProtocol ([int]$env:NAVYCRAFT_PROTOCOL)
+
+      - name: Assemble versioned native base installation
+        shell: pwsh
+        run: |
+          $version = $env:NAVYCRAFT_ENGINE_VERSION
+          $protocol = $env:NAVYCRAFT_PROTOCOL
+          $baseName = "NavyCraft-Native-Windows-Base-$version-p$protocol"
+          $updateName = "NavyCraft-Native-Windows-Update-$version-p$protocol"
+          $base = Join-Path $PWD $baseName
+          $update = Join-Path $PWD $updateName
+          New-Item -ItemType Directory -Force -Path "$base/bin","$base/games","$update/bin" | Out-Null
+          function Find-BuiltBinary([string]$name) {
+            $candidateDirectories = @(
+              "luanti/bin/Release",
+              "luanti/bin",
+              "luanti-build/bin/Release",
+              "luanti-build/bin",
+              "luanti-build/Release"
+            )
+            foreach ($directory in $candidateDirectories) {
+              if (-not (Test-Path $directory)) { continue }
+              $match = Get-ChildItem $directory -Filter $name -File -ErrorAction SilentlyContinue | Select-Object -First 1
+              if ($match) { return $match }
+            }
+            foreach ($root in @("luanti","luanti-build")) {
+              $match = Get-ChildItem $root -Filter $name -Recurse -File -ErrorAction SilentlyContinue |
+                Where-Object {
+                  $_.FullName -match '[\\/]bin[\\/](Release|RelWithDebInfo|MinSizeRel|Debug)?[\\/]?[^\\/]+$' -or
+                  $_.DirectoryName -match '[\\/]Release$'
+                } |
+                Select-Object -First 1
+              if ($match) { return $match }
+            }
+            return $null
+          }
+          $client = Find-BuiltBinary luanti.exe
+          $server = Find-BuiltBinary luantiserver.exe
+          if (-not $client) { throw 'Compiled luanti.exe not found' }
+          if (-not $server) { throw 'Compiled luantiserver.exe not found' }
+          Copy-Item $client.FullName "$base/bin/luanti.exe"
+          Copy-Item $server.FullName "$base/bin/luantiserver.exe"
+          Copy-Item $client.FullName "$update/bin/luanti.exe"
+          Copy-Item $server.FullName "$update/bin/luantiserver.exe"
+          foreach ($directory in @('builtin','client','fonts','textures','locale')) {
+            if (Test-Path "luanti/$directory") { Copy-Item -Recurse -Force "luanti/$directory" $base }
+          }
+          Copy-Item -Recurse -Force navycraft-source/game/navycraft "$base/games/navycraft"
+          Copy-Item navycraft-source/native-engine-version.json $base,$update
+          Copy-Item native-build.log,native-tests.log $base -ErrorAction SilentlyContinue
+          Copy-Item "$env:VCPKG_ROOT/installed/x64-windows/bin/*.dll" "$base/bin" -ErrorAction SilentlyContinue
+          Copy-Item "$env:VCPKG_ROOT/installed/x64-windows/bin/*.dll" "$update/bin" -ErrorAction SilentlyContinue
+          "Install this base once. Start bin\luanti.exe. Apply later versioned updates over this folder." | Set-Content "$base/INSTALL.txt"
+          "Close NavyCraft, extract over the matching native base, and replace files in bin." | Set-Content "$update/UPDATE.txt"
+          Compress-Archive -Path "$base/*" -DestinationPath "$baseName.zip"
+          Compress-Archive -Path "$update/*" -DestinationPath "$updateName.zip"
+          (Get-FileHash -Algorithm SHA256 "$baseName.zip").Hash.ToLowerInvariant() | Set-Content "$baseName.zip.sha256"
+          (Get-FileHash -Algorithm SHA256 "$updateName.zip").Hash.ToLowerInvariant() | Set-Content "$updateName.zip.sha256"
+
+      - name: Upload compiler and test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: navycraft-native-build-logs
+          path: |
+            native-configure.log
+            native-build.log
+            native-test-inventory.log
+            native-tests.log
+            luanti-build/CMakeCache.txt
+            luanti-build/CMakeFiles/CMakeOutput.log
+            luanti-build/CMakeFiles/CMakeError.log
+            luanti-build/navycraft-native-binary-acceptance.txt
+            luanti-build/navycraft-native-startup-acceptance.txt
+          if-no-files-found: ignore
+
+      - name: Upload native base installation
+        uses: actions/upload-artifact@v4
+        with:
+          name: NavyCraft-Native-Windows-Base-0.9.0-p16
+          path: |
+            NavyCraft-Native-Windows-Base-0.9.0-p16.zip
+            NavyCraft-Native-Windows-Base-0.9.0-p16.zip.sha256
+          if-no-files-found: error
+
+      - name: Upload drag-and-drop native update
+        uses: actions/upload-artifact@v4
+        with:
+          name: NavyCraft-Native-Windows-Update-0.9.0-p16
+          path: |
+            NavyCraft-Native-Windows-Update-0.9.0-p16.zip
+            NavyCraft-Native-Windows-Update-0.9.0-p16.zip.sha256
+          if-no-files-found: error
