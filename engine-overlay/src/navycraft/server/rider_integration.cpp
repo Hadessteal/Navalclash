@@ -404,7 +404,7 @@ void Server::StepNavyCraftCarriedObjects(float dtime)
     }
 
     for (const auto &[id, entity] : nearby_entities) {
-        aabb3f collision_box(v3f(0.0f, 0.0f, 0.0f));
+        aabb3f collision_box(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
         if (!entity || !entity->getCollisionBox(&collision_box)) {
             g_carried_bodies.remove(id);
             continue;
