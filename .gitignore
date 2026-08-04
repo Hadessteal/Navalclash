@@ -6,6 +6,7 @@
 /artifacts/
 /private-sdks/
 /store-credentials/
+/_github-artifacts/
 /.idea/
 __pycache__/
 *.pyc

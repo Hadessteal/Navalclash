@@ -26,6 +26,7 @@ def assert_applied_overlay(root: Path) -> None:
     assert cmake.count("add_subdirectory(navycraft)") == 1
     assert cmake.count("${navycraft_SRCS}") == 1
     assert cmake.count("${navycraft_client_SRCS}") == 1
+    assert cmake.count("${PROJECT_SOURCE_DIR}/navycraft") == 1
     assert main_cpp.count('#include "navycraft/construct/construct_handshake.h"') == 1
     assert main_cpp.count('"navycraft-version"') == 2
     assert main_cpp.count('"navycraft-protocol"') == 2
@@ -68,6 +69,8 @@ def assert_applied_overlay(root: Path) -> None:
     assert client_h.count("m_navycraft_handshake_accepted") == 1
     assert client_cpp.count("stepNavyCraftConstructScene(dtime)") == 1
     assert client_cpp.count("sendNavyCraftInteraction(action, pointed)") == 1
+    assert client_cpp.count('#include "navycraft/client/client_construct_effects.h"') == 1
+    assert client_cpp.count('#include "navycraft/client/client_construct_scene.h"') == 1
     assert "prepareNavyCraftLocalPlayerForPhysics" not in client_cpp
     assert localplayer_cpp.count("beginNavyCraftLocalPlayerMove") == 1
     assert localplayer_cpp.count("finishNavyCraftLocalPlayerMove") == 1
@@ -159,7 +162,8 @@ with tempfile.TemporaryDirectory(prefix="navycraft-overlay-") as directory:
     (root / "src" / "CMakeLists.txt").write_text(
         "add_subdirectory(server)\n\n"
         "set(common_SRCS\n\t${common_HDRS}\n\tmain.cpp\n)\n\n"
-        "list(APPEND client_SRCS\n\t${benchmark_client_SRCS}\n\t${common_SRCS}\n)\n",
+        "list(APPEND client_SRCS\n\t${benchmark_client_SRCS}\n\t${common_SRCS}\n)\n\n"
+        "include_directories(\n\t${PROJECT_BINARY_DIR}\n\t${PROJECT_SOURCE_DIR}\n\t${PROJECT_SOURCE_DIR}/script\n)\n",
         encoding="utf-8",
     )
     (root / "src" / "script" / "scripting_server.cpp").write_text(
@@ -244,6 +248,7 @@ with tempfile.TemporaryDirectory(prefix="navycraft-overlay-") as directory:
         encoding="utf-8",
     )
     (root / "src" / "client" / "client.cpp").write_text(
+        '#include "client/texturepaths.h"\n\n'
         "void Client::connect() {\n\tm_address_name = address_name;\n}\n"
         "void Client::step(float dtime) {\n\tm_env.step(dtime);\n\tm_sound->step(dtime);\n}\n"
         "void Client::interact(InteractAction action, const PointedThing& pointed)\n{\n}\n",

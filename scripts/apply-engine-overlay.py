@@ -58,6 +58,10 @@ text = replace_once(text,
     "list(APPEND client_SRCS\n\t${benchmark_client_SRCS}\n",
     "list(APPEND client_SRCS\n\t${navycraft_client_SRCS}\n\t${benchmark_client_SRCS}\n",
     "client source list")
+text = replace_once(text,
+    "include_directories(\n\t${PROJECT_BINARY_DIR}\n\t${PROJECT_SOURCE_DIR}\n\t${PROJECT_SOURCE_DIR}/script\n)\n",
+    "include_directories(\n\t${PROJECT_BINARY_DIR}\n\t${PROJECT_SOURCE_DIR}\n\t${PROJECT_SOURCE_DIR}/script\n\t${PROJECT_SOURCE_DIR}/navycraft\n)\n",
+    "NavyCraft include directory")
 cmake.write_text(text, encoding="utf-8")
 
 # Lua API registration.
@@ -197,6 +201,7 @@ text = replace_once(text,
     "NavyCraft handler declarations")
 text = replace_once(text,
     "\tvoid loadMods();\n",
+    "\tfriend class LocalPlayer;\n\n"
     "\tvoid loadMods();\n"
     "\tbool isNavyCraftProtocolReady() const noexcept;\n"
     "\tvoid sendNavyCraftHandshake();\n"
@@ -254,6 +259,10 @@ server_h.write_text(text, encoding="utf-8")
 # Step and reset the native scene with the normal client lifecycle.
 client_cpp = required["client_cpp"]
 text = client_cpp.read_text(encoding="utf-8")
+text = replace_once(text,
+    '#include "client/texturepaths.h"\n',
+    '#include "client/texturepaths.h"\n#include "navycraft/client/client_construct_effects.h"\n#include "navycraft/client/client_construct_scene.h"\n',
+    "NavyCraft complete client construct types")
 text = replace_once(text,
     "\tm_address_name = address_name;\n",
     "\tresetNavyCraftConnection();\n\tm_address_name = address_name;\n",
@@ -321,11 +330,11 @@ transparent_method = """void MapBlockMesh::materializeTransparentBuffersForScene
 \t\t\tbuffers.push_back(buffer);
 \t}
 \tfor (auto *buffer : buffers)
-\t\tbuffer->Indices.clear();
+\t\tbuffer->Indices->Data.clear();
 \tfor (const auto &triangle : m_transparent_triangles) {
-\t\ttriangle.buffer->Indices.push_back(triangle.p1);
-\t\ttriangle.buffer->Indices.push_back(triangle.p2);
-\t\ttriangle.buffer->Indices.push_back(triangle.p3);
+\t\ttriangle.buffer->Indices->Data.push_back(triangle.p1);
+\t\ttriangle.buffer->Indices->Data.push_back(triangle.p2);
+\t\ttriangle.buffer->Indices->Data.push_back(triangle.p3);
 \t}
 }
 
