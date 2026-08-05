@@ -79,7 +79,8 @@ jobs:
             -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" `
             -DBUILD_CLIENT=TRUE -DBUILD_SERVER=TRUE -DRUN_IN_PLACE=TRUE `
             -DBUILD_UNITTESTS=TRUE -DBUILD_BENCHMARKS=TRUE `
-            -DVCPKG_APPLOCAL_DEPS=ON -DENABLE_CURSES=OFF -DCMAKE_BUILD_TYPE=Release `
+            -DVCPKG_APPLOCAL_DEPS=ON -DENABLE_CURSES=OFF -DENABLE_POSTGRESQL=OFF `
+            -DCMAKE_BUILD_TYPE=Release `
             2>&1 | Tee-Object native-configure.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -187,7 +188,8 @@ jobs:
             if (Test-Path "luanti/$directory") { Copy-Item -Recurse -Force "luanti/$directory" $base }
           }
           Copy-Item -Recurse -Force navycraft-source/game/navycraft "$base/games/navycraft"
-          Copy-Item navycraft-source/native-engine-version.json $base,$update
+          Copy-Item navycraft-source/native-engine-version.json $base
+          Copy-Item navycraft-source/native-engine-version.json $update
           Copy-Item native-build.log,native-tests.log $base -ErrorAction SilentlyContinue
           $dllDirectories = @(
             $client.DirectoryName,
