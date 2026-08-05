@@ -102,7 +102,6 @@ private:
         Vec3d velocity{};
         Aabb3d world_box{};
         ConstructId previous_construct = 0;
-        bool touching_ground = false;
         bool jumped = false;
         bool active = false;
     };

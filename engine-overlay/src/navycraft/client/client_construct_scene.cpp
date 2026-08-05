@@ -306,7 +306,9 @@ LocalPlayerMotionOutput ClientConstructScene::beginLocalPlayerMove(
     LocalPlayerMotionOutput result;
     result.position = input.position;
     result.velocity = input.velocity;
-    result.touching_ground = input.touching_ground;
+    // Only native construct support should force pre-physics grounded state.
+    // Copying Luanti's previous-frame ground flag here latches jumps airborne.
+    result.touching_ground = false;
 
     if (input.delta_seconds <= 0.0 || !std::isfinite(input.delta_seconds) ||
             !input.world_box.valid()) {
@@ -369,7 +371,6 @@ LocalPlayerMotionOutput ClientConstructScene::beginLocalPlayerMove(
     m_pending_local_player_move.world_box = input.world_box.translated(
         result.position - input.position);
     m_pending_local_player_move.previous_construct = previous_construct;
-    m_pending_local_player_move.touching_ground = result.touching_ground;
     m_pending_local_player_move.jumped = result.jumped;
     m_pending_local_player_move.active = true;
     return result;
@@ -407,8 +408,7 @@ LocalPlayerMotionFinish ClientConstructScene::finishLocalPlayerMove(
 
     Vec3d final_position = pending.position + collision.allowed_delta;
     Vec3d final_velocity = collision.velocity;
-    bool grounded = pending.touching_ground || input.touching_ground ||
-        collision.touching_ground;
+    bool grounded = input.touching_ground || collision.touching_ground;
 
     ArticulatedMotionInput articulated_collision_input;
     articulated_collision_input.position = pending.position;

@@ -183,9 +183,10 @@ core.register_on_chatcommand(function(name, command, params)
 end)
 
 core.register_on_joinplayer(function(player)
-    if player:get_meta():get_string("nc_gamemode") == "" then
-        player:get_meta():set_string("nc_gamemode", "creative")
-    end
+    local mode = player:get_meta():get_string("nc_gamemode")
+    if mode == "" then mode = "creative" end
+    local ok = set_mode(player:get_player_name(), mode)
+    if not ok then set_mode(player:get_player_name(), "survival") end
 end)
 
 B.spawn_position = spawn_position

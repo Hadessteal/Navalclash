@@ -124,6 +124,10 @@ def assert_applied_overlay(root: Path) -> None:
     assert (root / "src" / "navycraft" / "construct" / "construct_handshake.cpp").exists()
     assert (root / "src" / "navycraft" / "construct" / "construct_database.cpp").exists()
     assert (root / "src" / "navycraft" / "construct" / "construct_persistence.cpp").exists()
+    client_scene = (root / "src" / "navycraft" / "client" / "client_construct_scene.cpp").read_text(encoding="utf-8")
+    assert "result.touching_ground = input.touching_ground;" not in client_scene
+    assert "pending.touching_ground ||" not in client_scene
+    assert "bool grounded = input.touching_ground || collision.touching_ground;" in client_scene
     script_api = (root / "src" / "navycraft" / "script_api.cpp").read_text(encoding="utf-8")
     assert "resolve_dynamic_construct_mutation" in script_api
     assert "initialise_dynamic_construct_persistence" in script_api

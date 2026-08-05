@@ -1336,6 +1336,24 @@ int main()
         require(jumped.inherited_velocity.x > 1.5,
             "rider jump did not inherit platform velocity");
 
+        std::vector<const DynamicConstruct *> no_hull_constructs;
+        HullCollisionInput pass_through_input;
+        pass_through_input.world_box = {{0.2, 2.0, 0.2}, {0.8, 3.75, 0.8}};
+        pass_through_input.velocity = {0.0, 3.0, 0.0};
+        pass_through_input.desired_delta = {0.0, 0.4, 0.0};
+        pass_through_input.delta_seconds = 0.1;
+        const auto pass_through_collision = MovingHullCollisionSolver::move(
+            no_hull_constructs, pass_through_input);
+        require(!pass_through_collision.collided &&
+                !pass_through_collision.touching_ground &&
+                pass_through_collision.contacts.empty(),
+            "empty moving-hull pass-through reported a contact");
+        require(close(pass_through_collision.allowed_delta.y,
+                pass_through_input.desired_delta.y) &&
+                close(pass_through_collision.velocity.y,
+                    pass_through_input.velocity.y),
+            "empty moving-hull pass-through changed vertical motion");
+
         DynamicConstruct wall_construct(710);
         wall_construct.setNode({0, 0, 0}, ConstructNode{1, 0, 0, "wall", {}});
         std::vector<const DynamicConstruct *> wall_constructs{&wall_construct};
