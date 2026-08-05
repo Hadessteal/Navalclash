@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 #include "construct_persistence.h"
+#include "construct_runtime.h"
 
 #include <stdexcept>
 #include <utility>
@@ -12,7 +13,12 @@ void ConstructPersistenceService::initialise(
     std::lock_guard<std::mutex> lock(m_mutex);
     auto database = std::make_unique<ConstructDatabase>(path_value);
     auto constructs = database->loadAllConstructs();
-    registry.clear();
+    if (m_database)
+        m_database->flush();
+    if (&registry == &runtimeConstructRegistry())
+        resetRuntimeConstructState();
+    else
+        registry.clear();
     for (auto &construct : constructs) {
         if (!registry.importConstruct(std::move(construct), true))
             throw std::runtime_error("failed to import persisted NavyCraft construct");

@@ -380,6 +380,13 @@ void ConstructFireControlEngine::expireTracks(
     }
 }
 
+void ConstructFireControlEngine::clear()
+{
+    m_tracks.clear();
+    m_batteries.clear();
+    m_next_battery_id = 1;
+}
+
 std::optional<FireControlTrack> ConstructFireControlEngine::findTrack(
     ConstructId observer_construct_id, ConstructId target_construct_id) const
 {

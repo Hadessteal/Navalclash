@@ -36,11 +36,27 @@ function Find-Binary([string]$name) {
 }
 
 function Invoke-Probe([System.IO.FileInfo]$Binary, [string]$Argument) {
-    $output = & $Binary.FullName $Argument 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        throw "$($Binary.Name) $Argument failed with exit code $LASTEXITCODE`: $($output -join ' ')"
+    $stdout = [IO.Path]::GetTempFileName()
+    $stderr = [IO.Path]::GetTempFileName()
+    try {
+        $process = Start-Process -FilePath $Binary.FullName -ArgumentList @($Argument) `
+            -PassThru -Wait -WindowStyle Hidden `
+            -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+        $output = @()
+        if (Test-Path -LiteralPath $stdout) {
+            $output += Get-Content -LiteralPath $stdout
+        }
+        if (Test-Path -LiteralPath $stderr) {
+            $output += Get-Content -LiteralPath $stderr
+        }
+        if ($process.ExitCode -ne 0) {
+            throw "$($Binary.Name) $Argument failed with exit code $($process.ExitCode)`: $($output -join ' ')"
+        }
+        return (($output -join "`n").Trim())
     }
-    return (($output -join "`n").Trim())
+    finally {
+        Remove-Item -LiteralPath $stdout,$stderr -Force -ErrorAction SilentlyContinue
+    }
 }
 
 $client = Find-Binary 'luanti.exe'

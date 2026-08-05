@@ -234,6 +234,40 @@ std::size_t ConstructInteractionEngine::pendingMutationCount() const noexcept
     return m_pending_mutations.size();
 }
 
+void ConstructInteractionEngine::removeConstruct(ConstructId construct_id)
+{
+    if (construct_id == 0)
+        return;
+    const auto belongs_to_construct = [construct_id](const auto &event) {
+        return event.request.construct_id == construct_id;
+    };
+    m_events.erase(std::remove_if(m_events.begin(), m_events.end(),
+        belongs_to_construct), m_events.end());
+    m_unresolved_timer_events.erase(std::remove_if(
+        m_unresolved_timer_events.begin(), m_unresolved_timer_events.end(),
+        belongs_to_construct), m_unresolved_timer_events.end());
+    for (auto iterator = m_pending_mutations.begin();
+            iterator != m_pending_mutations.end();) {
+        if (iterator->second.request.construct_id == construct_id)
+            iterator = m_pending_mutations.erase(iterator);
+        else
+            ++iterator;
+    }
+    m_mutation_records.erase(std::remove_if(m_mutation_records.begin(),
+        m_mutation_records.end(), [construct_id](const auto &record) {
+            return record.construct_id == construct_id;
+        }), m_mutation_records.end());
+}
+
+void ConstructInteractionEngine::clear() noexcept
+{
+    m_next_event_id = 1;
+    m_events.clear();
+    m_unresolved_timer_events.clear();
+    m_pending_mutations.clear();
+    m_mutation_records.clear();
+}
+
 void ConstructInteractionEngine::queueEvent(ConstructCallbackEvent event)
 {
     m_events.push_back(std::move(event));

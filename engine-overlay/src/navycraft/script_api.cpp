@@ -1230,8 +1230,10 @@ int ModApiNavyCraft::l_create_dynamic_construct(lua_State *L)
         pushId(L, construct->id());
         return 1;
     } catch (const std::exception &error) {
-        if (construct)
+        if (construct) {
             navycraft::runtimeConstructRegistry().remove(construct->id());
+            navycraft::clearRuntimeConstructState(construct->id());
+        }
         return fail(L, error.what());
     }
 }
@@ -1299,14 +1301,9 @@ int ModApiNavyCraft::l_remove_dynamic_construct(lua_State *L)
         const auto id = readId(L, 1);
         const bool removed = navycraft::runtimeConstructRegistry().remove(id);
         if (removed) {
-            navycraft::runtimeConstructFireControlEngine().removeConstruct(id);
-            navycraft::runtimeConstructNavigationEngine().remove(id);
-            navycraft::runtimeConstructStructureEngine().remove(id);
-            navycraft::runtimeConstructArticulationEngine().removeConstruct(id);
-            navycraft::runtimeConstructLiquidEngine().removeConstruct(id);
+            navycraft::clearRuntimeConstructState(id);
             broadcastMessage(getServer(L), {navycraft::ConstructWireKind::Remove, id,
                 navycraft::ConstructPacketCodec::encodeRemove(id), true});
-            navycraft::clearRuntimeSequences(id);
         }
         lua_pushboolean(L, removed);
         return 1;
@@ -1732,7 +1729,7 @@ int ModApiNavyCraft::l_rollback_dynamic_construct_action(lua_State *L)
             static_cast<std::int64_t>(raw_id), navycraft::runtimeConstructRegistry());
         if (!construct)
             return fail(L, "construct rollback action not found");
-        navycraft::clearRuntimeSequences(construct->id());
+        navycraft::clearRuntimeConstructState(construct->id());
         broadcastMessage(getServer(L), {navycraft::ConstructWireKind::Remove,
             construct->id(), navycraft::ConstructPacketCodec::encodeRemove(construct->id()), true});
         broadcastFullConstruct(getServer(L), *construct);

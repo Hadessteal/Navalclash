@@ -47,6 +47,22 @@ local function scan_from_origin(player, origin)
 end
 
 local function launch_from_origin(player, origin)
+    local name = player:get_player_name()
+    if construct_state.get_for_owner(name) then
+        core.chat_send_player(name, "Launch blocked: dock or remove your active vessel first")
+        return false
+    end
+    if construct_state.find_at_world_node then
+        local active = construct_state.find_at_world_node(origin)
+        if active then
+            core.chat_send_player(name, "Launch blocked: target block is already part of a moving vessel")
+            return false
+        end
+    end
+    if construct_state.untracked_runtime_count and construct_state.untracked_runtime_count() > 0 then
+        core.chat_send_player(name, "Launch blocked: stale native ship data found. Run /nc_purge_constructs first.")
+        return false
+    end
     local result = scan_from_origin(player, origin)
     if not result then return false end
     if navycraft.systems and navycraft.systems.analyse then
@@ -258,6 +274,15 @@ core.register_chatcommand("nc_resetship", {
         construct_state.clear_passenger(name)
         local ok, message = construct_state.remove(name, false, "manual_test_reset")
         return ok, ok and "Active native construct deleted" or message
+    end,
+})
+
+core.register_chatcommand("nc_purge_constructs", {
+    description = "Delete all active native NavyCraft constructs and clear saved active-ship state",
+    privs = {interact = true},
+    func = function(name)
+        local ok, message = construct_state.purge_all("manual_test_purge")
+        return ok, message
     end,
 })
 

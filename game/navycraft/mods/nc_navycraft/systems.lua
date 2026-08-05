@@ -132,7 +132,7 @@ local function default_systems(profile,owner)
         owner=owner,captain=owner,driver=owner,crew={[owner]="owner"},crew_history={[owner]=true},
         boarding="open",abandoned=false,captain_abandoned=false,taking_over=nil,takeover_started=0,
         release_at=0,remote_control=false,last_teleport=0,
-        throttle=0,gear=1,rudder=0,vertical_planes=0,docking_mode=true,
+        throttle=0,set_speed=0,gear=1,rudder=0,turn_progress=0,turn_elapsed=0,vertical_planes=0,docking_mode=true,
         submerged_mode=false,ballast_mode=0,ballast_air_percent=100,
         buoyancy=0,displacement=profile.displacement,last_displacement=profile.displacement,
         block_displacement=profile.block_displacement,air_displacement=profile.air_displacement,
@@ -196,6 +196,22 @@ local function calculate_engine_speed(construct)
     local overload=s.overloaded and .75 or 1
     s.top_speed=math.min(total,craft_type.max_speed,cap)*(equipment.speed_mult or 1)*maintenance*overload
     return s.top_speed
+end
+
+local function movement_interval(craft_type,gear)
+    local absolute=math.abs(tonumber(gear) or 0)
+    if craft_type.can_fly and absolute>=3 then return 2 end
+    if absolute>=3 then return 2.5 end
+    if absolute==2 then return 5 end
+    return 8
+end
+
+local function telegraph_text(craft_type,set_speed)
+    if craft_type.can_fly then return "Throttle-"..tostring(set_speed*10).."%" end
+    if craft_type.terrestrial then return "Throttle-"..tostring(set_speed*25).."%" end
+    local names={[0]="All Stop",[1]="Engines Slow",[2]="Engines 1/3",[3]="Engines 2/3",
+        [4]="Engines Standard",[5]="Engines Full",[6]="Engines Flank!"}
+    return names[set_speed] or ("Engines "..tostring(set_speed))
 end
 
 local function update_damage_and_pumps(construct,dt)
@@ -273,7 +289,16 @@ function S.step(construct,dt)
         s.driver=nil;s.captain_abandoned=true;s.abandoned=true;s.release_at=0
     end
     local top_speed=calculate_engine_speed(construct)
-    local throttle=clamp(s.throttle or 0,0,1)
+    local max_engine_speed=math.max(1,tonumber(craft_type.max_engine_speed) or 1)
+    local set_speed=clamp(math.floor(tonumber(s.set_speed) or ((s.throttle or 0)*max_engine_speed)+0.5),0,max_engine_speed)
+    s.set_speed=set_speed
+    s.throttle=set_speed/max_engine_speed
+    if set_speed==0 then
+        s.rudder=0
+        s.turn_progress=0
+        s.turn_elapsed=0
+    end
+    local throttle=s.throttle
     local gear=clamp(math.floor(s.gear or 1),craft_type.max_reverse_gear,craft_type.max_forward_gear)
     local direction=gear<0 and -1 or (gear==0 and 0 or 1)
     local denominator=gear<0 and math.max(1,math.abs(craft_type.max_reverse_gear)) or math.max(1,craft_type.max_forward_gear)
@@ -282,9 +307,30 @@ function S.step(construct,dt)
     if s.hyperdrive or s.in_hyperspace then speed=speed*D.source.hyperspace_move_multiplier end
     if s.sinking then speed=0 end
     construct.forward_speed=speed
-    local speed_factor=math.max(.25,math.min(2,math.abs(speed)))
-    local degrees_per_second=(90/math.max(1,craft_type.turn_radius))*speed_factor
-    construct.yaw_rate=math.rad(clamp((s.rudder or 0)*degrees_per_second,-45,45))
+    local can_turn=set_speed>0 and gear>0 and math.abs(speed)>0.001
+    if not can_turn then
+        construct.yaw_rate=0
+    else
+        local interval=movement_interval(craft_type,gear)
+        local turn_radius=math.max(1,tonumber(craft_type.turn_radius) or 4)
+        local degrees_per_second=90/(interval*turn_radius)
+        construct.yaw_rate=math.rad(clamp((s.rudder or 0)*degrees_per_second,-45,45))
+        if (s.turn_progress or 0)>0 then
+            s.turn_elapsed=(s.turn_elapsed or 0)+dt
+            while s.turn_elapsed>=interval and (s.turn_progress or 0)>0 do
+                s.turn_elapsed=s.turn_elapsed-interval
+                s.turn_progress=s.turn_progress-1
+            end
+            if (s.turn_progress or 0)<=0 then
+                s.turn_progress=0
+                s.turn_elapsed=0
+                s.rudder=0
+                construct.yaw_rate=0
+            end
+        else
+            s.turn_elapsed=0
+        end
+    end
     local vertical=0
     if s.sinking then vertical=-math.max(.5,1+s.flooding/math.max(1,p.block_count))
     elseif craft_type.can_fly then
@@ -343,9 +389,105 @@ function S.boarding_filter(construct,player)
     return false
 end
 
-function S.set_throttle(c,v) c.systems.throttle=clamp(v,0,1) end
+local function set_all_engines(c,on)
+    for _,state in pairs(c.systems.engines or {}) do state.set_on=on and true or false end
+end
+
+local function moving(c)
+    return math.abs(tonumber(c.forward_speed) or 0)>0.05 or
+        math.abs(tonumber(c.vertical_speed) or 0)>0.05
+end
+
+function S.take_helm(c,name)
+    if not c or not c.systems then return false,"no active vessel" end
+    if not S.authorized(c,name,"crew") then return false,"you are not on this vessel's crew" end
+    c.systems.driver=name
+    c.systems.abandoned=false
+    c.systems.captain_abandoned=false
+    return true,"You are driving "..c.id
+end
+
+function S.speed_change(c,increase)
+    local s,t=c.systems,D.craft_types[c.profile.craft_type]
+    if s.helm_destroyed then return false,"Helm Control or Engines Destroyed!" end
+    local total=0;for _ in pairs(s.engines or {}) do total=total+1 end
+    if total==0 then
+        s.set_speed=0;s.throttle=0;s.engines_on=false
+        return false,"Error: No engines detected! Check engine signs."
+    end
+    local set_speed=math.floor(tonumber(s.set_speed) or ((s.throttle or 0)*(t.max_engine_speed or 1))+.5)
+    if increase then
+        set_speed=math.min(set_speed+1,t.max_engine_speed)
+        if set_speed>=1 then set_all_engines(c,true) end
+    else
+        set_speed=set_speed-1
+        if t.can_fly and set_speed==0 and ((s.gear or 1)>1 or math.abs(c.vertical_speed or 0)>0.05) then
+            set_speed=1
+            s.set_speed=set_speed;s.throttle=set_speed/math.max(1,t.max_engine_speed)
+            return false,"Can't reduce speed to zero in this gear"
+        end
+        if set_speed<=0 then
+            set_speed=0
+            s.rudder=0;s.turn_progress=0;s.turn_elapsed=0
+            set_all_engines(c,false)
+        end
+    end
+    s.set_speed=set_speed
+    s.throttle=set_speed/math.max(1,t.max_engine_speed)
+    return true,set_speed==0 and "Stopping Engines..." or telegraph_text(t,set_speed)
+end
+
+function S.gear_change(c,increase)
+    local s,t=c.systems,D.craft_types[c.profile.craft_type]
+    if s.helm_destroyed then return false,"Helm Control or Engines Destroyed!" end
+    local next_gear=math.floor(s.gear or 1)+(increase and 1 or -1)
+    if next_gear==0 then next_gear=next_gear+(increase and 1 or -1) end
+    next_gear=clamp(next_gear,t.max_reverse_gear,t.max_forward_gear)
+    if next_gear>0 and (s.gear or 1)<0 and moving(c) then return false,"Stop moving before changing to forward gears." end
+    if next_gear<0 and (s.gear or 1)>0 and moving(c) then return false,"Stop moving before changing to reverse gears." end
+    if t.can_fly and next_gear==1 and ((math.abs(c.vertical_speed or 0)>0.05) or (s.set_speed or 0)~=1) then
+        return false,"Must be on ground and engine at idle to shift into 1..."
+    end
+    s.gear=next_gear
+    return true,"Set engines to Gear-("..tostring(s.gear)..")"
+end
+
+function S.set_throttle(c,v)
+    local t=D.craft_types[c.profile.craft_type]
+    local set_speed=clamp(math.floor(clamp(v,0,1)*(t.max_engine_speed or 1)+0.5),0,t.max_engine_speed)
+    c.systems.set_speed=set_speed
+    c.systems.throttle=set_speed/math.max(1,t.max_engine_speed)
+    if set_speed>0 then set_all_engines(c,true) else set_all_engines(c,false);c.systems.rudder=0;c.systems.turn_progress=0;c.systems.turn_elapsed=0 end
+end
 function S.set_gear(c,v) local t=D.craft_types[c.profile.craft_type];c.systems.gear=clamp(math.floor(v),t.max_reverse_gear,t.max_forward_gear) end
-function S.set_rudder(c,v) c.systems.rudder=clamp(v,-1,1) end
+function S.rudder_order(c,order,turn)
+    local s,t=c.systems,D.craft_types[c.profile.craft_type]
+    order=order<0 and -1 or 1
+    if s.helm_destroyed then return false,"Helm Control or Engines Destroyed!" end
+    if (s.set_speed or 0)==0 or (s.gear or 1)<=0 then return false,"You have to be moving forward to turn." end
+    if t.can_fly and (s.gear or 1)>1 and math.abs(c.vertical_speed or 0)<0.05 then return false,"You can't turn while taking off." end
+    if s.rudder==0 or (s.rudder==order and turn and (s.turn_progress or 0)==0) then
+        s.rudder=order
+        if turn then
+            s.turn_progress=t.turn_radius or 4
+            s.turn_elapsed=0
+            return true,order>0 and "Rudder Turning Right" or "Rudder Turning Left"
+        end
+        return true,order>0 and "Rudder Right" or "Rudder Left"
+    elseif s.rudder==-order then
+        if (s.turn_progress or 0)==0 or (s.turn_progress or 0)>(t.turn_radius or 4)/2 then
+            s.rudder=0;s.turn_progress=0;s.turn_elapsed=0
+            return true,"Rudder Centered"
+        end
+        return false,"Too late to cancel turn, please wait."
+    end
+    return false,"Rudder already set. Look other way to cancel."
+end
+function S.set_rudder(c,v)
+    local value=clamp(v,-1,1)
+    c.systems.rudder=value
+    if value==0 then c.systems.turn_progress=0;c.systems.turn_elapsed=0 end
+end
 function S.set_planes(c,v) c.systems.vertical_planes=clamp(v,-1,1) end
 function S.cycle_ballast(c) c.systems.ballast_mode=(c.systems.ballast_mode+1)%4;return ballast_names[c.systems.ballast_mode+1] end
 function S.toggle_subdrive(c) c.systems.submerged_mode=not c.systems.submerged_mode;c.systems.vertical_planes=0;return c.systems.submerged_mode and "submerged/electric" or "surface/diesel" end

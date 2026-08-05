@@ -127,6 +127,14 @@ local function cycle_value(value,values)
     local index=1;for i,v in ipairs(values) do if v==value then index=i end end
     return values[index%#values+1]
 end
+local function set_telegraph(construct,value)
+    S.set_throttle(construct,value)
+    return "Engine telegraph "..math.floor((construct.systems.throttle or 0)*100).."%"
+end
+local function set_rudder_order(construct,value)
+    if value==0 then S.set_rudder(construct,0);return true,"Rudder Centered" end
+    return S.rudder_order(construct,value<0 and -1 or 1,false)
+end
 
 core.register_craftitem("nc_navycraft:universal_remote",{
     description="NavyCraft Universal Remote",inventory_image="nc_frame.png^[colorize:#ddaa33:190",
@@ -155,10 +163,10 @@ function N.handle_moving_interaction(construct,node_index,player,action)
     if def._navycraft_weapon_type~=nil and action=="rightclick" then local ok,msg=W.fire(construct,player,def._navycraft_weapon_type);tell(player,msg);return true end
     local s=construct.systems
     if component=="nav" then
-        if action=="rightclick" then s.throttle=cycle_value(s.throttle,{0,.25,.5,.75,1});tell(player,"Throttle "..math.floor(s.throttle*100).."%")
-        else s.rudder=cycle_value(s.rudder,{-1,0,1});tell(player,"Rudder "..s.rudder) end
-    elseif component=="telegraph" and action=="rightclick" then s.throttle=cycle_value(s.throttle,{0,.25,.5,.75,1});tell(player,"Engine telegraph "..math.floor(s.throttle*100).."%")
-    elseif component=="rudder" and action=="rightclick" then s.rudder=cycle_value(s.rudder,{-1,0,1});tell(player,"Rudder "..s.rudder)
+        if action=="rightclick" then tell(player,set_telegraph(construct,cycle_value(s.throttle,{0,.25,.5,.75,1})))
+        else local ok,msg=set_rudder_order(construct,cycle_value(s.rudder,{-1,0,1}));tell(player,msg) end
+    elseif component=="telegraph" and action=="rightclick" then tell(player,set_telegraph(construct,cycle_value(s.throttle,{0,.25,.5,.75,1})))
+    elseif component=="rudder" and action=="rightclick" then local ok,msg=set_rudder_order(construct,cycle_value(s.rudder,{-1,0,1}));tell(player,msg)
     elseif component=="planes" and action=="rightclick" then s.vertical_planes=cycle_value(s.vertical_planes,{-1,0,1});tell(player,"Planes "..s.vertical_planes)
     elseif component=="subdrive" and action=="rightclick" then tell(player,"Subdrive: "..S.toggle_subdrive(construct))
     elseif component=="ballast" and action=="rightclick" then tell(player,"Ballast mode: "..S.cycle_ballast(construct))
@@ -198,7 +206,13 @@ function N.handle_moving_interaction(construct,node_index,player,action)
     elseif component=="pump" and action=="rightclick" then s.pump_on=not s.pump_on;tell(player,"Pumps "..(s.pump_on and "ON" or "OFF"))
     elseif component=="hyperdrive" and action=="rightclick" then s.hyperdrive=not s.hyperdrive;tell(player,"Hyperdrive "..(s.hyperdrive and "ENGAGED" or "DISENGAGED"))
     elseif component=="buoyancy" and action=="rightclick" then tell(player,S.summary(construct))
-    elseif component=="helm" and action=="rightclick" then tell(player,S.summary(construct))
+    elseif component=="helm" and action=="rightclick" then
+        if navycraft.controls and navycraft.controls.take_helm then
+            navycraft.controls.take_helm(construct,player)
+        else
+            S.take_helm(construct,player:get_player_name())
+        end
+        tell(player,S.summary(construct))
     else return false end
     navycraft.preview.save();return true
 end

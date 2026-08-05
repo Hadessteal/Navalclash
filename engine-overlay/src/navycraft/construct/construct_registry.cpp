@@ -76,6 +76,7 @@ void ConstructRegistry::clear()
 {
     std::unique_lock lock(m_mutex);
     m_constructs.clear();
+    m_next_id.store(1, std::memory_order_relaxed);
 }
 
 void ConstructRegistry::stepAll(double delta_seconds)

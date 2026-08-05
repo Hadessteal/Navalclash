@@ -101,6 +101,8 @@ public:
     [[nodiscard]] std::vector<ConstructMutationRecord> drainMutationRecords();
     [[nodiscard]] std::size_t pendingEventCount() const noexcept;
     [[nodiscard]] std::size_t pendingMutationCount() const noexcept;
+    void removeConstruct(ConstructId construct_id);
+    void clear() noexcept;
 
 private:
     void queueEvent(ConstructCallbackEvent event);

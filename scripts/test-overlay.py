@@ -158,6 +158,121 @@ def assert_applied_overlay(root: Path) -> None:
     assert "lua_pushinteger(L, 16)" in script_api
     assert 'registerFunction(L, "step_dynamic_constructs"' not in script_api
 
+def assert_project_sources() -> None:
+    native_state = (PROJECT / "game" / "navycraft" / "mods" / "nc_core" /
+        "native_construct_state.lua").read_text(encoding="utf-8")
+    assert "local function send_drive_velocity(construct,force)" in native_state
+    assert "mark_motion_sent(construct)" in native_state
+    assert "if math.abs(construct.yaw_rate or 0)>0.0001 and math.abs(construct.forward_speed or 0)>0.0001" not in native_state
+    restore = native_state[native_state.index("local function restore_saved_constructs"):]
+    assert "state=core.get_dynamic_construct(native_id,false)" in restore
+    assert "native_id,error_message=create_native" in restore
+    assert restore.index("state=core.get_dynamic_construct(native_id,false)") < restore.index("native_id,error_message=create_native")
+    assert "send_drive_velocity(saved,true)" in restore
+    assert "function M.find_at_world_node(world_pos)" in native_state
+    assert "vector.distance(exact,rounded)<0.65" in native_state
+    assert "local function clear_source_nodes(scan_result)" in native_state
+    assert "core.remove_node(entry.pos)" in native_state
+    assert "source blocks were not cleared" in native_state
+    assert "function M.untracked_runtime_count()" in native_state
+    assert "function M.purge_all(reason)" in native_state
+    assert "core.list_dynamic_constructs()" in native_state
+    assert "untracked_runtime_ids(native_id)" in native_state
+    assert "core.sync_dynamic_construct_persistence()" in native_state
+    step = native_state[native_state.index("core.register_globalstep"):]
+    assert step.index("for _,callback in ipairs(step_hooks)") < step.index("if math.abs(construct.turn_remaining")
+    assert step.index("if math.abs(construct.turn_remaining") < step.index("send_drive_velocity(construct,false)")
+
+    runtime_h = (PROJECT / "engine-overlay" / "src" / "navycraft" /
+        "construct" / "construct_runtime.h").read_text(encoding="utf-8")
+    runtime_cpp = (PROJECT / "engine-overlay" / "src" / "navycraft" /
+        "construct" / "construct_runtime.cpp").read_text(encoding="utf-8")
+    persistence_cpp = (PROJECT / "engine-overlay" / "src" / "navycraft" /
+        "construct" / "construct_persistence.cpp").read_text(encoding="utf-8")
+    interaction_h = (PROJECT / "engine-overlay" / "src" / "navycraft" /
+        "construct" / "construct_interaction.h").read_text(encoding="utf-8")
+    interaction_cpp = (PROJECT / "engine-overlay" / "src" / "navycraft" /
+        "construct" / "construct_interaction.cpp").read_text(encoding="utf-8")
+    fire_control_cpp = (PROJECT / "engine-overlay" / "src" / "navycraft" /
+        "construct" / "construct_fire_control.cpp").read_text(encoding="utf-8")
+    projectiles_cpp = (PROJECT / "engine-overlay" / "src" / "navycraft" /
+        "construct" / "construct_projectiles.cpp").read_text(encoding="utf-8")
+    registry_cpp = (PROJECT / "engine-overlay" / "src" / "navycraft" /
+        "construct" / "construct_registry.cpp").read_text(encoding="utf-8")
+    assert "void resetRuntimeConstructState() noexcept;" in runtime_h
+    assert "void clearRuntimeConstructState(ConstructId id) noexcept;" in runtime_h
+    assert "void resetRuntimeConstructState() noexcept" in runtime_cpp
+    assert "void clearRuntimeConstructState(ConstructId id) noexcept" in runtime_cpp
+    assert "runtimeConstructInteractionEngine().removeConstruct(id);" in runtime_cpp
+    for call in (
+        "runtimeConstructInteractionEngine().clear();",
+        "runtimeConstructProjectileEngine().clear();",
+        "runtimeConstructFireControlEngine().clear();",
+        "runtimeConstructNavigationEngine().clear();",
+        "runtimeConstructStructureEngine().clear();",
+        "runtimeConstructArticulationEngine().clear();",
+        "runtimeConstructLiquidEngine().clear();",
+        "runtimeConstructSpecialNodeEngine().clear();",
+        "runtimeConstructSimulation().reset();",
+        "runtimeConstructRegistry().clear();",
+    ):
+        assert call in runtime_cpp
+    assert "resetRuntimeConstructState();" in persistence_cpp
+    assert "void clear() noexcept;" in interaction_h
+    assert "void removeConstruct(ConstructId construct_id);" in interaction_h
+    assert "void ConstructInteractionEngine::clear() noexcept" in interaction_cpp
+    assert "void ConstructInteractionEngine::removeConstruct(ConstructId construct_id)" in interaction_cpp
+    assert "m_next_event_id = 1;" in interaction_cpp
+    assert "void ConstructFireControlEngine::clear()" in fire_control_cpp
+    assert "m_next_battery_id = 1;" in fire_control_cpp
+    assert "m_next_id = 1;" in projectiles_cpp
+    assert "m_next_id.store(1, std::memory_order_relaxed);" in registry_cpp
+
+    script_api_cpp = (PROJECT / "engine-overlay" / "src" / "navycraft" /
+        "script_api.cpp").read_text(encoding="utf-8")
+    assert "clearRuntimeConstructState(id);" in script_api_cpp
+    assert "clearRuntimeConstructState(construct->id());" in script_api_cpp
+    client_scene_cpp = (PROJECT / "engine-overlay" / "src" / "navycraft" /
+        "client" / "client_construct_scene.cpp").read_text(encoding="utf-8")
+    assert "node_def->getId(entry.node.node_name, resolved)" in client_scene_cpp
+    assert client_scene_cpp.index("node_def->getId(entry.node.node_name, resolved)") < client_scene_cpp.index("MapNode node(entry.node.content_id")
+
+    core_init = (PROJECT / "game" / "navycraft" / "mods" / "nc_core" /
+        "init.lua").read_text(encoding="utf-8")
+    launch = core_init[core_init.index("local function launch_from_origin"):]
+    assert "construct_state.get_for_owner(name)" in launch
+    assert "construct_state.find_at_world_node(origin)" in launch
+    assert "construct_state.untracked_runtime_count" in launch
+    assert launch.index("construct_state.get_for_owner(name)") < launch.index("scan_from_origin(player, origin)")
+    assert 'core.register_chatcommand("nc_purge_constructs"' in core_init
+
+    item_tooltips = (PROJECT / "game" / "navycraft" / "mods" / "nc_core" /
+        "item_tooltips.lua").read_text(encoding="utf-8")
+    assert "local inventory_open = {}" in item_tooltips
+    assert "local function toggle_inventory(player)" in item_tooltips
+    assert "core.close_formspec(name, \"\")" in item_tooltips
+    assert "toggle_inventory(player)" in item_tooltips
+
+    definitions = (PROJECT / "game" / "navycraft" / "mods" / "nc_navycraft" /
+        "definitions.lua").read_text(encoding="utf-8")
+    assert 'ship = {drive_command="sail", min_blocks=50' in definitions
+    assert 'freeship = {drive_command="sail", min_blocks=50' in definitions
+    assert 'halfship = {drive_command="sail", min_blocks=50' in definitions
+    systems = (PROJECT / "game" / "navycraft" / "mods" / "nc_navycraft" /
+        "systems.lua").read_text(encoding="utf-8")
+    assert "function S.speed_change(c,increase)" in systems
+    assert "function S.gear_change(c,increase)" in systems
+    assert "function S.rudder_order(c,order,turn)" in systems
+    assert "movement_interval(craft_type,gear)" in systems
+    controls = (PROJECT / "game" / "navycraft" / "mods" / "nc_navycraft" /
+        "controls.lua").read_text(encoding="utf-8")
+    assert "core.register_globalstep(function()" in controls
+    assert "S.speed_change(c,true)" in controls
+    assert "S.gear_change(c,true)" in controls
+    assert "S.rudder_order(c,1,true)" in controls
+
+assert_project_sources()
+
 with tempfile.TemporaryDirectory(prefix="navycraft-overlay-") as directory:
     root = Path(directory)
     (root / "src" / "script").mkdir(parents=True)

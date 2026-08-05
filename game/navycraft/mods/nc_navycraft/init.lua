@@ -13,6 +13,7 @@ navycraft.routes=dofile(modpath.."/routes.lua")
 navycraft.navigation=dofile(modpath.."/navigation.lua")
 navycraft.structure=dofile(modpath.."/structure.lua")
 navycraft.radio=dofile(modpath.."/radio.lua")
+navycraft.controls=dofile(modpath.."/controls.lua")
 navycraft.weapons.register_items_and_nodes()
 navycraft.nodes=dofile(modpath.."/nodes.lua")
 if navycraft.dynamic_interactions then

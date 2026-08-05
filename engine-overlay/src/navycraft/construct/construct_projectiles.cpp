@@ -422,6 +422,7 @@ bool ConstructProjectileEngine::remove(ProjectileId id)
 void ConstructProjectileEngine::clear()
 {
     m_projectiles.clear();
+    m_next_id = 1;
 }
 
 void ConstructProjectileEngine::setWorldRaycast(WorldRaycast callback)

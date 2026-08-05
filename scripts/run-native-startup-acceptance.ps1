@@ -44,14 +44,16 @@ if (-not $server) { throw 'luantiserver.exe missing from complete native build' 
 $gamesRoot = Join-Path $SourceRoot 'games'
 $targetGame = Join-Path $gamesRoot 'navycraft'
 New-Item -ItemType Directory -Force -Path $gamesRoot | Out-Null
-if (Test-Path -LiteralPath $targetGame) {
-    $resolvedTarget = (Resolve-Path -LiteralPath $targetGame).Path
-    if (-not $resolvedTarget.StartsWith($gamesRoot, [StringComparison]::OrdinalIgnoreCase)) {
-        throw "refusing to replace game outside Luanti games directory: $resolvedTarget"
+if (-not [String]::Equals($GameRoot, $targetGame, [StringComparison]::OrdinalIgnoreCase)) {
+    if (Test-Path -LiteralPath $targetGame) {
+        $resolvedTarget = (Resolve-Path -LiteralPath $targetGame).Path
+        if (-not $resolvedTarget.StartsWith($gamesRoot, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "refusing to replace game outside Luanti games directory: $resolvedTarget"
+        }
+        Remove-Item -LiteralPath $targetGame -Recurse -Force
     }
-    Remove-Item -LiteralPath $targetGame -Recurse -Force
+    Copy-Item -LiteralPath $GameRoot -Destination $targetGame -Recurse -Force
 }
-Copy-Item -LiteralPath $GameRoot -Destination $targetGame -Recurse -Force
 
 $runRoot = Join-Path ([IO.Path]::GetTempPath()) ("navycraft-native-startup-" + [Guid]::NewGuid().ToString("n"))
 $world = Join-Path $runRoot 'world'

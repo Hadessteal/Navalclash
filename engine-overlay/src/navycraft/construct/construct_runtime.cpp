@@ -72,6 +72,35 @@ ConstructSimulation &runtimeConstructSimulation() noexcept
     return simulation;
 }
 
+void clearRuntimeConstructState(ConstructId id) noexcept
+{
+    runtimeConstructInteractionEngine().removeConstruct(id);
+    runtimeConstructFireControlEngine().removeConstruct(id);
+    runtimeConstructNavigationEngine().remove(id);
+    runtimeConstructStructureEngine().remove(id);
+    runtimeConstructArticulationEngine().removeConstruct(id);
+    runtimeConstructLiquidEngine().removeConstruct(id);
+    clearRuntimeSequences(id);
+}
+
+void resetRuntimeConstructState() noexcept
+{
+    runtimeConstructInteractionEngine().clear();
+    runtimeConstructProjectileEngine().clear();
+    runtimeConstructFireControlEngine().clear();
+    runtimeConstructNavigationEngine().clear();
+    runtimeConstructStructureEngine().clear();
+    runtimeConstructArticulationEngine().clear();
+    runtimeConstructLiquidEngine().clear();
+    runtimeConstructSpecialNodeEngine().clear();
+    runtimeConstructSimulation().reset();
+    runtimeConstructRegistry().clear();
+    std::lock_guard<std::mutex> lock(g_sequence_mutex);
+    g_transform_sequences.clear();
+    g_section_sequences.clear();
+    g_effect_sequences.clear();
+}
+
 std::uint64_t nextRuntimeTransformSequence(ConstructId id) noexcept
 {
     std::lock_guard<std::mutex> lock(g_sequence_mutex);

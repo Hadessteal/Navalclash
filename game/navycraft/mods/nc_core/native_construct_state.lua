@@ -12,6 +12,7 @@ local MAX_VERTICAL_SPEED = 4
 local MAX_YAW_RATE = math.rad(45)
 local MAX_QUEUED_TURN = math.rad(720)
 local PI, HALF_PI, TWO_PI = math.pi, math.pi / 2, math.pi * 2
+local MOTION_EPSILON = 0.0001
 local step_accumulator = 0
 
 local function copy(value)
@@ -111,6 +112,68 @@ local function save_all()
     storage:set_string("active_native_constructs_v1",core.serialize(serializable))
 end
 
+local function runtime_constructs()
+    if type(core.list_dynamic_constructs) ~= "function" then return {} end
+    local listed = core.list_dynamic_constructs()
+    if type(listed) ~= "table" then return {} end
+    return listed
+end
+
+local function runtime_id(entry)
+    return tonumber(type(entry) == "table" and entry.id or entry)
+end
+
+local function tracked_native_ids()
+    local tracked = {}
+    for _,construct in pairs(constructs) do
+        if construct.native_id then tracked[tonumber(construct.native_id)] = true end
+    end
+    return tracked
+end
+
+local function untracked_runtime_ids(exclude_id)
+    local tracked = tracked_native_ids()
+    exclude_id = tonumber(exclude_id)
+    local ids = {}
+    for _,entry in ipairs(runtime_constructs()) do
+        local native_id = runtime_id(entry)
+        if native_id and native_id ~= exclude_id and not tracked[native_id] then ids[#ids + 1] = native_id end
+    end
+    table.sort(ids)
+    return ids
+end
+
+local function clear_source_nodes(scan_result)
+    local failures = {}
+    for _,entry in ipairs(scan_result.nodes or {}) do
+        local current = core.get_node_or_nil(entry.pos)
+        if not current then
+            failures[#failures + 1] = core.pos_to_string(entry.pos) .. " is not loaded"
+        elseif current.name ~= entry.name then
+            failures[#failures + 1] = core.pos_to_string(entry.pos) .. " changed to " .. tostring(current.name)
+        end
+    end
+    if #failures > 0 then
+        return false, "source craft changed before launch: " .. table.concat(failures, "; ")
+    end
+
+    for _,entry in ipairs(scan_result.nodes or {}) do
+        core.remove_node(entry.pos)
+    end
+    for _,entry in ipairs(scan_result.nodes or {}) do
+        local current = core.get_node_or_nil(entry.pos)
+        if not current then
+            failures[#failures + 1] = core.pos_to_string(entry.pos) .. " is not loaded after clear"
+        elseif current.name ~= "air" and not (core.registered_nodes[current.name] and core.registered_nodes[current.name].buildable_to) then
+            failures[#failures + 1] = core.pos_to_string(entry.pos) .. " still contains " .. tostring(current.name)
+        end
+    end
+    if #failures > 0 then
+        return false, "source blocks were not cleared: " .. table.concat(failures, "; ")
+    end
+    return true
+end
+
 local function refresh_native(construct)
     local state,error_message=core.get_dynamic_construct(construct.native_id,false)
     if not state then return false,error_message or "native construct not found" end
@@ -130,6 +193,36 @@ local function apply_drive_velocity(construct)
     }
     return core.set_dynamic_construct_velocity(
         construct.native_id,velocity,construct.yaw_rate or 0)
+end
+
+local function yaw_difference(a,b)
+    return math.abs(((normalise_yaw(a)-normalise_yaw(b)+PI)%TWO_PI)-PI)
+end
+
+local function motion_changed(construct)
+    local last=construct._last_sent_motion
+    if not last then return true end
+    local forward=construct.forward_speed or 0
+    return math.abs(forward-(last.forward_speed or 0))>MOTION_EPSILON
+        or math.abs((construct.vertical_speed or 0)-(last.vertical_speed or 0))>MOTION_EPSILON
+        or math.abs((construct.yaw_rate or 0)-(last.yaw_rate or 0))>MOTION_EPSILON
+        or (math.abs(forward)>MOTION_EPSILON and yaw_difference(construct.yaw,last.yaw or 0)>MOTION_EPSILON)
+end
+
+local function mark_motion_sent(construct)
+    construct._last_sent_motion={
+        forward_speed=construct.forward_speed or 0,
+        vertical_speed=construct.vertical_speed or 0,
+        yaw_rate=construct.yaw_rate or 0,
+        yaw=construct.yaw or 0,
+    }
+end
+
+local function send_drive_velocity(construct,force)
+    if not force and not motion_changed(construct) then return true end
+    local ok,error_message=apply_drive_velocity(construct)
+    if ok then mark_motion_sent(construct) end
+    return ok,error_message
 end
 
 local function restore_world_nodes(construct,quarter_turn)
@@ -179,6 +272,11 @@ function M.launch(player,scan_result,native_id)
     if not native_id then return nil,"native construct id required" end
     local owner=player:get_player_name()
     if owner_active[owner] then return nil,"you already have an active construct" end
+    local ghost_ids=untracked_runtime_ids(native_id)
+    if #ghost_ids>0 then
+        core.remove_dynamic_construct(native_id)
+        return nil,"native construct runtime has untracked ships; run /nc_purge_constructs before launching again"
+    end
     local pivot=compute_pivot(scan_result)
     local construct={
         id="native-"..tostring(native_id),native_id=native_id,owner=owner,
@@ -194,7 +292,8 @@ function M.launch(player,scan_result,native_id)
         local ok,error_message=callback(construct,scan_result,player)
         if ok==false then core.remove_dynamic_construct(native_id);return nil,error_message or "launch hook rejected construct" end
     end
-    for _,node in ipairs(scan_result.nodes) do core.set_node(node.pos,{name="air"}) end
+    local cleared,clear_error=clear_source_nodes(scan_result)
+    if not cleared then core.remove_dynamic_construct(native_id);return nil,clear_error end
     constructs[construct.id]=construct;owner_active[owner]=construct.id;save_all()
     return construct.id
 end
@@ -202,12 +301,28 @@ end
 function M.get_for_owner(owner) local id=owner_active[owner];return id and constructs[id] or nil end
 function M.get_all() return constructs end
 function M.get_by_id(id) return constructs[id] end
+function M.untracked_runtime_count() return #untracked_runtime_ids() end
 
 local function same_local_pos(a,b) return a and b and a.x==b.x and a.y==b.y and a.z==b.z end
 function M.find_node_index(construct,local_pos)
     if type(construct)=="string" then construct=constructs[construct] end
     if not construct then return nil end
     for index,entry in ipairs(construct.nodes or {}) do if not entry.destroyed and same_local_pos(entry.local_pos,local_pos) then return index end end
+end
+
+function M.find_at_world_node(world_pos)
+    local rounded=vector.round(world_pos)
+    for _,construct in pairs(constructs) do
+        refresh_native(construct)
+        local local_pos=vector.round(world_to_local(construct,rounded))
+        local index=M.find_node_index(construct,local_pos)
+        if index then
+            local exact=world_position(construct,construct.nodes[index].local_pos)
+            if vector.distance(exact,rounded)<0.65 then
+                return construct,index
+            end
+        end
+    end
 end
 
 function M.sync_native_dig(native_id,local_pos)
@@ -245,24 +360,35 @@ function M.register_remove_hook(callback) remove_hooks[#remove_hooks+1]=callback
 
 function M.set_motion(owner,forward_speed,yaw_rate,vertical_speed)
     local construct=M.get_for_owner(owner);if not construct then return false,"no active construct" end
+    if construct.systems then return false,"use helm controls or /ship throttle|gear|rudder for NavyCraft vessels" end
     if forward_speed~=nil then construct.forward_speed=clamp(forward_speed,-MAX_FORWARD_SPEED,MAX_FORWARD_SPEED) end
     if yaw_rate~=nil then construct.yaw_rate=clamp(yaw_rate,-MAX_YAW_RATE,MAX_YAW_RATE);construct.turn_remaining=0 end
     if vertical_speed~=nil then construct.vertical_speed=clamp(vertical_speed,-MAX_VERTICAL_SPEED,MAX_VERTICAL_SPEED) end
-    local ok,error_message=apply_drive_velocity(construct);save_all();return ok~=nil and ok or false,error_message
+    local ok,error_message=send_drive_velocity(construct,true);save_all();return ok~=nil and ok or false,error_message
 end
 
 function M.turn(owner,degrees)
     local construct=M.get_for_owner(owner);if not construct then return false,"no active construct" end
+    if construct.systems then
+        local nc=rawget(_G,"navycraft")
+        if nc and nc.systems and nc.systems.rudder_order then
+            return nc.systems.rudder_order(construct,(tonumber(degrees) or 0)<0 and -1 or 1,true)
+        end
+        return false,"use helm controls or /ship turn for NavyCraft vessels"
+    end
     construct.turn_remaining=clamp((construct.turn_remaining or 0)+math.rad(degrees),-MAX_QUEUED_TURN,MAX_QUEUED_TURN)
     construct.yaw_rate=sign(construct.turn_remaining)*MAX_YAW_RATE
-    apply_drive_velocity(construct);save_all()
+    send_drive_velocity(construct,true);save_all()
     return true,string.format("queued %.1f° turn",math.deg(construct.turn_remaining))
 end
 
 function M.stop(owner)
     local construct=M.get_for_owner(owner);if not construct then return false,"no active construct" end
+    if construct.systems then
+        construct.systems.set_speed=0;construct.systems.throttle=0;construct.systems.rudder=0;construct.systems.turn_progress=0;construct.systems.turn_elapsed=0
+    end
     construct.forward_speed=0;construct.vertical_speed=0;construct.yaw_rate=0;construct.turn_remaining=0
-    local ok,error_message=apply_drive_velocity(construct);save_all();return ok~=nil and ok or false,error_message
+    local ok,error_message=send_drive_velocity(construct,true);save_all();return ok~=nil and ok or false,error_message
 end
 
 function M.status(owner)
@@ -299,7 +425,7 @@ function M.teleport(id_or_owner,position,yaw)
     local transform={position=vector.new(position),yaw=yaw~=nil and normalise_yaw(yaw) or construct.yaw}
     local ok,error_message=core.set_dynamic_construct_transform(construct.native_id,transform);if not ok then return false,error_message end
     construct.position=transform.position;construct.yaw=transform.yaw;construct.forward_speed=0;construct.vertical_speed=0;construct.yaw_rate=0;construct.turn_remaining=0
-    apply_drive_velocity(construct);save_all();return true
+    send_drive_velocity(construct,true);save_all();return true
 end
 
 function M.transfer_owner(id_or_construct,new_owner,options)
@@ -320,6 +446,33 @@ function M.remove(id_or_owner,restore,reason)
     reason=reason or(restore and "restored_to_world" or "removed")
     for _,callback in ipairs(remove_hooks) do local ok,err=pcall(callback,construct,reason,clean_construct(construct));if not ok then core.log("error","[NavyCraft] remove hook failed: "..tostring(err)) end end
     core.remove_dynamic_construct(construct.native_id);constructs[construct.id]=nil;if owner_active[construct.owner]==construct.id then owner_active[construct.owner]=nil end;save_all();return true
+end
+
+function M.purge_all(reason)
+    reason=reason or "manual_native_purge"
+    for _,construct in pairs(constructs) do
+        for _,callback in ipairs(remove_hooks) do
+            local ok,err=pcall(callback,construct,reason,clean_construct(construct))
+            if not ok then core.log("error","[NavyCraft] purge hook failed: "..tostring(err)) end
+        end
+    end
+    local removed=0
+    local seen={}
+    for _,entry in ipairs(runtime_constructs()) do
+        local native_id=runtime_id(entry)
+        if native_id and not seen[native_id] then
+            seen[native_id]=true
+            if core.remove_dynamic_construct(native_id) then removed=removed+1 end
+        end
+    end
+    constructs={};owner_active={}
+    storage:set_string("active_constructs_v1","")
+    save_all()
+    if type(core.sync_dynamic_construct_persistence) == "function" then
+        local _,error_message=core.sync_dynamic_construct_persistence()
+        if error_message then core.log("error","[NavyCraft] purge persistence sync failed: "..tostring(error_message)) end
+    end
+    return true,string.format("Purged %d native construct(s)",removed)
 end
 
 local function remove_native_nodes(construct,positions)
@@ -377,16 +530,33 @@ local function restore_saved_constructs()
         -- Deliberately discard legacy lua-* state instead of resurrecting the
         -- removed entity renderer.
         storage:set_string("active_constructs_v1","")
+        local ghost_ids=untracked_runtime_ids()
+        if #ghost_ids>0 then
+            core.log("warning","[NavyCraft] native runtime has "..#ghost_ids.." untracked construct(s); use /nc_purge_constructs before launching")
+        end
         return
     end
     local loaded=core.deserialize(raw);if type(loaded)~="table" then core.log("error","[NavyCraft] native construct storage could not be decoded");return end
     for _,saved in pairs(loaded) do
-        if saved.owner and type(saved.nodes)=="table" then
-            local native_id,error_message=create_native(saved.owner,saved.nodes,vector.new(saved.position),normalise_yaw(saved.yaw or 0))
+        if saved.owner and type(saved.nodes)=="table" and saved.position then
+            local native_id=tonumber(saved.native_id)
+            local state
+            if native_id and native_id~=0 then
+                state=core.get_dynamic_construct(native_id,false)
+            end
+            if not state then
+                local error_message
+                native_id,error_message=create_native(saved.owner,saved.nodes,vector.new(saved.position),normalise_yaw(saved.yaw or 0))
+                if not native_id then
+                    core.log("error","[NavyCraft] native construct restore failed: "..tostring(error_message))
+                else
+                    state=core.get_dynamic_construct(native_id,false)
+                end
+            end
             if native_id then
-                saved.native_id=native_id;saved.id="native-"..tostring(native_id);saved.bounds=compute_bounds(saved.nodes);saved.forward_speed=saved.forward_speed or 0;saved.vertical_speed=saved.vertical_speed or 0;saved.yaw_rate=saved.yaw_rate or 0;saved.turn_remaining=saved.turn_remaining or 0
-                constructs[saved.id]=saved;owner_active[saved.owner]=saved.id;apply_drive_velocity(saved)
-            else core.log("error","[NavyCraft] native construct restore failed: "..tostring(error_message)) end
+                saved.native_id=native_id;saved.id="native-"..tostring(native_id);saved.position=vector.new(state and state.position or saved.position);saved.yaw=normalise_yaw(state and state.yaw or saved.yaw or 0);saved.bounds=compute_bounds(saved.nodes);saved.forward_speed=saved.forward_speed or 0;saved.vertical_speed=saved.vertical_speed or 0;saved.yaw_rate=saved.yaw_rate or 0;saved.turn_remaining=saved.turn_remaining or 0
+                constructs[saved.id]=saved;owner_active[saved.owner]=saved.id;send_drive_velocity(saved,true)
+            end
         end
     end
     save_all()
@@ -399,15 +569,14 @@ core.register_globalstep(function(dtime)
         local ok=refresh_native(construct)
         if not ok then constructs[id]=nil;if owner_active[construct.owner]==id then owner_active[construct.owner]=nil end
         else
-            if math.abs(construct.turn_remaining or 0)>0.0001 then
+            for _,callback in ipairs(step_hooks) do callback(construct,dt) end
+            if not construct.systems and math.abs(construct.turn_remaining or 0)>0.0001 then
                 local amount=math.min(math.abs(construct.turn_remaining),MAX_YAW_RATE*dt)
                 construct.turn_remaining=construct.turn_remaining-sign(construct.turn_remaining)*amount
-                if math.abs(construct.turn_remaining)<0.001 then construct.turn_remaining=0;construct.yaw_rate=0 end
+                construct.yaw_rate=sign(construct.turn_remaining)*MAX_YAW_RATE
+                if math.abs(construct.turn_remaining or 0)<0.001 then construct.turn_remaining=0;construct.yaw_rate=0 end
             end
-            if math.abs(construct.yaw_rate or 0)>0.0001 and math.abs(construct.forward_speed or 0)>0.0001 then
-                apply_drive_velocity(construct)
-            end
-            for _,callback in ipairs(step_hooks) do callback(construct,dt) end
+            send_drive_velocity(construct,false)
         end
     end
 end)

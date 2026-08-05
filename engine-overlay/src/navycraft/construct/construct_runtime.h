@@ -26,6 +26,8 @@ ConstructArticulationEngine &runtimeConstructArticulationEngine() noexcept;
 ConstructLiquidEngine &runtimeConstructLiquidEngine() noexcept;
 ConstructSpecialNodeEngine &runtimeConstructSpecialNodeEngine() noexcept;
 ConstructSimulation &runtimeConstructSimulation() noexcept;
+void clearRuntimeConstructState(ConstructId id) noexcept;
+void resetRuntimeConstructState() noexcept;
 std::uint64_t nextRuntimeTransformSequence(ConstructId id) noexcept;
 std::uint64_t nextRuntimeSectionSequence(ConstructId id) noexcept;
 std::uint64_t nextRuntimeEffectSequence(ConstructId id) noexcept;

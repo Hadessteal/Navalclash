@@ -97,16 +97,18 @@ void fillConstructMeshData(
         const v3s16 position = checkedNodePosition(entry.position);
         if (!data.m_vmanip.m_area.contains(position))
             continue;
+        content_t resolved = CONTENT_IGNORE;
+        if (!entry.node.node_name.empty() &&
+                node_def->getId(entry.node.node_name, resolved)) {
+            MapNode node(resolved, entry.node.param1, entry.node.param2);
+            data.m_vmanip.setNodeNoEmerge(position, node);
+            continue;
+        }
+
         MapNode node(entry.node.content_id, entry.node.param1, entry.node.param2);
         if (node.getContent() == CONTENT_IGNORE ||
-                node_def->get(node).name.empty()) {
-            content_t resolved = CONTENT_IGNORE;
-            if (!entry.node.node_name.empty() &&
-                    node_def->getId(entry.node.node_name, resolved))
-                node.setContent(resolved);
-            else
-                node.setContent(CONTENT_UNKNOWN);
-        }
+                node_def->get(node).name.empty())
+            node.setContent(CONTENT_UNKNOWN);
         data.m_vmanip.setNodeNoEmerge(position, node);
     }
 }

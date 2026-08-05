@@ -144,6 +144,7 @@ public:
     void clearTracks(ConstructId observer_construct_id = 0);
     void removeConstruct(ConstructId construct_id);
     void expireTracks(double current_time, double maximum_age_seconds);
+    void clear();
 
     [[nodiscard]] std::optional<FireControlTrack> findTrack(
         ConstructId observer_construct_id, ConstructId target_construct_id) const;

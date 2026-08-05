@@ -6,6 +6,7 @@ local selected_hud = {}
 local last_index = {}
 local hide_generation = {}
 local e_was_down = {}
+local inventory_open = {}
 local timer = 0
 
 local function item_description(stack)
@@ -135,7 +136,27 @@ end
 
 local function open_inventory(player)
     apply_inventory(player)
-    core.show_formspec(player:get_player_name(), "", inventory_formspec())
+    local name = player:get_player_name()
+    core.show_formspec(name, "", inventory_formspec())
+    inventory_open[name] = true
+end
+
+local function close_inventory(player)
+    local name = player:get_player_name()
+    if core.close_formspec then
+        core.close_formspec(name, "")
+    else
+        core.show_formspec(name, "", "")
+    end
+    inventory_open[name] = false
+end
+
+local function toggle_inventory(player)
+    if inventory_open[player:get_player_name()] then
+        close_inventory(player)
+    else
+        open_inventory(player)
+    end
 end
 
 core.register_on_joinplayer(function(player)
@@ -144,6 +165,7 @@ core.register_on_joinplayer(function(player)
     local name = player:get_player_name()
     last_index[name] = player:get_wield_index()
     e_was_down[name] = false
+    inventory_open[name] = false
     core.after(0.2, function()
         local current = core.get_player_by_name(name)
         if current then show_selected(current) end
@@ -156,6 +178,15 @@ core.register_on_leaveplayer(function(player)
     last_index[name] = nil
     hide_generation[name] = nil
     e_was_down[name] = nil
+    inventory_open[name] = nil
+end)
+
+core.register_on_player_receive_fields(function(player, formname, fields)
+    if formname ~= "" then return false end
+    if fields.quit then
+        inventory_open[player:get_player_name()] = false
+    end
+    return false
 end)
 
 core.register_globalstep(function(dtime)
@@ -174,7 +205,7 @@ core.register_globalstep(function(dtime)
         local controls = player:get_player_control()
         local e_down = controls and controls.aux1 or false
         if e_down and not e_was_down[name] then
-            open_inventory(player)
+            toggle_inventory(player)
         end
         e_was_down[name] = e_down
     end

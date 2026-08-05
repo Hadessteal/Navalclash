@@ -80,15 +80,22 @@ local function ship_dispatch(name,param,forced_type)
     if cmd==""or cmd=="help"then return true,ship_help()end
     if cmd=="info"or cmd=="update"then return c~=nil,c and S.summary(c)or"no active vessel"
     elseif cmd=="types"then local out={};for _,n in ipairs(D.craft_order)do local t=D.craft_types[n];out[#out+1]=string.format("%s %d-%d",n,t.min_blocks,t.max_blocks)end;return true,table.concat(out," | ")
-    elseif cmd=="drive"or cmd=="sail"or cmd=="pilot"or cmd=="dive"then if not c then return false,"no active vessel"end;c.systems.driver=name;c.systems.abandoned=false;c.systems.captain_abandoned=false;save();return true,"You are driving "..c.id
+    elseif cmd=="drive"or cmd=="sail"or cmd=="pilot"or cmd=="dive"then if not c then return false,"no active vessel"end;local ok,msg=S.take_helm(c,name);save();return ok,msg
     elseif cmd=="throttle"or cmd=="setspeed"then if not c then return false,"no active vessel"end;local v=tonumber(args[2]);if not v then return false,"number required"end;S.set_throttle(c,v>1 and v/100 or v);save();return true,S.summary(c)
     elseif cmd=="gear"then if not c then return false,"no active vessel"end;S.set_gear(c,tonumber(args[2])or 0);save();return true,S.summary(c)
-    elseif cmd=="rudder"then if not c then return false,"no active vessel"end;S.set_rudder(c,tonumber(args[2])or 0);save();return true,S.summary(c)
+    elseif cmd=="rudder"then
+        if not c then return false,"no active vessel"end
+        local v=tonumber(args[2])or 0
+        if v==0 then S.set_rudder(c,0);save();return true,S.summary(c) end
+        local ok,msg=S.rudder_order(c,v<0 and -1 or 1,false);save();return ok,msg
     elseif cmd=="planes"or cmd=="lift"then if not c then return false,"no active vessel"end;S.set_planes(c,tonumber(args[2])or 0);save();return true,S.summary(c)
     elseif cmd=="turn"then
         if not c then return false,"no active vessel"end;local value=(args[2]or""):lower();local degrees=value=="right"and 90 or value=="left"and-90 or value=="around"and 180 or tonumber(value)
-        if not degrees then return false,"turn right|left|around|<degrees>"end;c.turn_remaining=clamp((c.turn_remaining or 0)+math.rad(degrees),-math.pi*4,math.pi*4);c.systems.rudder=0;save();return true,"Queued smooth turn "..degrees.." degrees"
-    elseif cmd=="park"or cmd=="neutral"then if not c then return false,"no active vessel"end;c.systems.throttle=0;c.systems.gear=0;c.systems.rudder=0;c.systems.vertical_planes=0;navycraft.preview.stop(c.owner);return true,"Vessel parked"
+        if not degrees then return false,"turn right|left|around"end
+        local ok,msg=S.rudder_order(c,degrees<0 and -1 or 1,true)
+        if ok and math.abs(degrees)>=180 then c.systems.turn_progress=(D.craft_types[c.profile.craft_type].turn_radius or 4)*2 end
+        save();return ok,msg
+    elseif cmd=="park"or cmd=="neutral"then if not c then return false,"no active vessel"end;c.systems.throttle=0;c.systems.set_speed=0;c.systems.gear=0;c.systems.rudder=0;c.systems.turn_progress=0;c.systems.turn_elapsed=0;c.systems.vertical_planes=0;navycraft.preview.stop(c.owner);return true,"Vessel parked"
     elseif cmd=="dock"then local cc,e=commander(name);if not cc then return false,e end;return navycraft.preview.dock(cc.owner)
     elseif cmd=="name"or cmd=="setname"then local cc,e=commander(name);if not cc then return false,e end;cc.systems.custom_name=join(args,2):sub(1,32);save();return true,"Vessel named "..cc.systems.custom_name
     elseif cmd=="remote"then if not c then return false,"no active vessel"end;c.systems.remote_control=not c.systems.remote_control;save();return true,"Remote control "..bool(c.systems.remote_control)
