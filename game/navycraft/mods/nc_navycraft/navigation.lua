@@ -24,6 +24,16 @@ local function now_seconds()
 end
 local function clamp(v,a,b)return math.max(a,math.min(b,v))end
 local function bool(v)return v and "ON" or "OFF"end
+local function yaw_forward(yaw)
+    if type(core.yaw_to_dir)=="function"then
+        local dir=core.yaw_to_dir(yaw or 0)
+        if dir then return {x=dir.x or 0,y=0,z=dir.z or 0}end
+    end
+    return {x=-math.sin(yaw or 0),y=0,z=math.cos(yaw or 0)}
+end
+local function yaw_right(yaw)
+    return {x=math.cos(yaw or 0),y=0,z=math.sin(yaw or 0)}
+end
 local function domain(construct)
     local kind=construct.profile and construct.profile.craft_type or "ship"
     if kind=="aircraft"or kind=="airship"then return"air"end
@@ -118,8 +128,8 @@ end
 local function observe_terrain(construct,current_time)
     if N.avoidance_enabled[construct.id]==false or type(core.observe_dynamic_construct_obstacle)~="function"then return end
     local radius,height=local_radius(construct);local lookahead=math.max(16,radius*3)
-    local forward={x=math.sin(construct.yaw),y=0,z=math.cos(construct.yaw)}
-    local right={x=math.cos(construct.yaw),y=0,z=-math.sin(construct.yaw)}
+    local forward=yaw_forward(construct.yaw)
+    local right=yaw_right(construct.yaw)
     local offsets={-radius,0,radius};local verticals={0,math.min(height,3)}
     local ray_index=0
     for _,lateral in ipairs(offsets)do for _,vertical in ipairs(verticals)do
@@ -158,10 +168,24 @@ end
 
 function N.step(construct,dt)
     if not N.native_available()or not construct.native_id or not construct.systems then return end
+    local s=construct.systems
+    if mode_of(construct)=="manual"then
+        if N.signatures[construct.id] or N.commands[tostring(construct.native_id)]then
+            if construct.native_id and type(core.clear_dynamic_construct_navigation)=="function"then
+                pcall(core.clear_dynamic_construct_navigation,construct.native_id)
+            end
+            N.signatures[construct.id]=nil
+            N.commands[tostring(construct.native_id)]=nil
+        end
+        s.navigation_status="manual"
+        s.navigation_avoiding=false
+        s.navigation_recovering=false
+        s.navigation_distance=0
+        return
+    end
     local ok,err=configure(construct);if not ok and err then core.log("warning","[NavyCraft] navigation configure failed: "..tostring(err))end
     local current_time=now_seconds();observe_terrain(construct,current_time);refresh_commands(dt,current_time)
     local command=N.commands[tostring(construct.native_id)];if not command then return end
-    local s=construct.systems
     s.navigation_status=command.reason;s.navigation_avoiding=command.avoiding;s.navigation_recovering=command.recovering
     s.navigation_distance=command.distance or 0;s.navigation_obstacle_id=command.obstacle_id
     if command.waypoint_index then s.current_waypoint=command.waypoint_index;s.route_stage=command.waypoint_index end

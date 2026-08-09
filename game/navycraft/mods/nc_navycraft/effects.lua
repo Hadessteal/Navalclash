@@ -1,6 +1,20 @@
 -- Native construct-attached audio and visual effects.
 -- Events are sent in ship-local coordinates so they remain attached while the vessel moves.
 local E = {}
+local SHIP_AUDIO_ENABLED = false
+
+local muted_ship_sounds = {
+    nc_engine_loop = true,
+    nc_alarm = true,
+    nc_hull_hit = true,
+}
+
+local function muted_audio(definition)
+    if SHIP_AUDIO_ENABLED then return false end
+    if definition.kind == "sound_loop_start" then return true end
+    if definition.kind == "sound" and muted_ship_sounds[definition.sound] then return true end
+    return false
+end
 
 local function local_from_world(construct, world)
     local dx = world.x - construct.position.x
@@ -54,6 +68,7 @@ end
 function E.emit(construct, definition)
     if not construct then return false,"missing construct" end
     definition=definition or {}
+    if muted_audio(definition) then return true end
     if construct.native_id and type(core.emit_dynamic_construct_effect)=="function" then
         local ok,err=core.emit_dynamic_construct_effect(construct.native_id,definition)
         return ok~=nil and ok~=false,err
@@ -100,7 +115,7 @@ function E.update(construct, dt)
     local speed=math.abs(construct.forward_speed or 0)
     local throttle=math.max(0,math.min(1,s.throttle or 0))
 
-    set_persistent(construct,"engine_sound",s.engines_on and not s.sinking,{
+    set_persistent(construct,"engine_sound",false,{
         kind="sound_loop_start",effect_id=1001,preset="engine",local_pos=center,
         sound="nc_engine_loop",gain=.3+.55*throttle,pitch=.75+.65*throttle,max_distance=100})
     set_persistent(construct,"exhaust",s.engines_on and not s.submerged_mode and not s.sinking,{

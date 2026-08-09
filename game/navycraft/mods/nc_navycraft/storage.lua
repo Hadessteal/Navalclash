@@ -72,7 +72,7 @@ function ST.store(name,blueprint_name)
     snapshot.systems.owner=name;snapshot.systems.captain=name;snapshot.systems.driver=name
     snapshot.systems.crew={[name]="owner"};snapshot.systems.crew_history={[name]=true}
     snapshot.systems.autotravel=false;snapshot.systems.hyperdrive=false;snapshot.systems.in_hyperspace=false
-    snapshot.systems.sinking=false;snapshot.systems.scuttle_at=0;snapshot.systems.last_weapon_fire=0
+    snapshot.systems.sinking=false;snapshot.systems.frozen=false;snapshot.systems.scuttle_at=0;snapshot.systems.last_weapon_fire=0
     snapshot.systems.stored_name=blueprint_name
     snapshot.stored_at=os.time();snapshot.plot_id=type(plot_or_error)=="table" and plot_or_error.id or nil
     blueprints[key(name,blueprint_name)]={owner=name,name=blueprint_name,snapshot=snapshot,created=os.time(),updated=os.time()}
@@ -126,7 +126,7 @@ function ST.import_snapshot(owner,name,snapshot,options)
     snapshot.owner=owner;snapshot.systems=deep_copy(snapshot.systems or{})
     snapshot.systems.owner=owner;snapshot.systems.captain=owner;snapshot.systems.driver=owner
     snapshot.systems.crew={[owner]="owner"};snapshot.systems.crew_history=snapshot.systems.crew_history or{};snapshot.systems.crew_history[owner]=true
-    snapshot.systems.autotravel=false;snapshot.systems.hyperdrive=false;snapshot.systems.in_hyperspace=false
+    snapshot.systems.autotravel=false;snapshot.systems.hyperdrive=false;snapshot.systems.in_hyperspace=false;snapshot.systems.frozen=false
     snapshot.systems.stored_name=name;snapshot.stored_at=os.time()
     blueprints[key(owner,name)]={owner=owner,name=name,snapshot=snapshot,created=options.created or os.time(),updated=os.time(),source=options.source,title_id=options.title_id}
     if options.select~=false then selected[owner]=name end
@@ -160,20 +160,26 @@ function ST.spawn(owner,name,position,yaw,options)
     options=options or {}
     local record=ST.get(owner,name)
     if not record then return false,"stored vehicle not found" end
-    if navycraft.preview.get_for_owner(owner) and not options.allow_multiple then return false,"you already have an active vessel" end
     local snapshot=deep_copy(record.snapshot)
     snapshot.systems=snapshot.systems or {}
     snapshot.systems.owner=owner
     snapshot.systems.captain=options.captain or owner
     snapshot.systems.driver=options.driver or owner
     snapshot.systems.stored_name=record.name
+    snapshot.systems.frozen=false
+    snapshot.systems.abandoned=false
+    snapshot.systems.captain_abandoned=false
+    snapshot.systems.taking_over=nil
+    snapshot.systems.takeover_started=0
+    snapshot.systems.release_at=0
+    snapshot.systems.remote_control=false
     if options.auto then
         snapshot.systems.is_auto_craft=true
         snapshot.systems.route_id=options.route_id or ""
         snapshot.systems.autotravel=true
     end
     local runtime_owner=options.runtime_owner or owner
-    local id,error_message=navycraft.preview.spawn_snapshot(runtime_owner,snapshot,position,yaw or 0)
+    local id,error_message=navycraft.preview.spawn_snapshot(runtime_owner,snapshot,position,yaw or 0,options)
     if not id then return false,error_message end
     local construct=navycraft.preview.get_by_id(id)
     if construct then
@@ -221,7 +227,7 @@ function ST.repair_active(name)
     local repair=construct.systems and construct.systems.repair_snapshot
     if not repair then return false,"no launch-time repair snapshot exists" end
     local runtime_owner=construct.owner;local position=vector.new(construct.position);local yaw=construct.yaw
-    local systems=deep_copy(construct.systems);systems.hull_integrity=1;systems.flooding=0;systems.sinking=false;systems.helm_destroyed=false;systems.scuttle_at=0
+    local systems=deep_copy(construct.systems);systems.hull_integrity=1;systems.flooding=0;systems.sinking=false;systems.helm_destroyed=false;systems.scuttle_at=0;systems.frozen=false
     local snapshot={nodes=deep_copy(repair.nodes),profile=deep_copy(repair.profile),systems=systems}
     local ok,error_message=navycraft.preview.remove(construct.id,false,"repair_replace");if not ok then return false,error_message end
     local id,spawn_error=navycraft.preview.spawn_snapshot(runtime_owner,snapshot,position,yaw)
@@ -241,6 +247,7 @@ function ST.repair(owner,name)
     record.snapshot.systems.flooding=0
     record.snapshot.systems.sinking=false
     record.snapshot.systems.helm_destroyed=false
+    record.snapshot.systems.frozen=false
     record.updated=os.time();persist()
     return true,"Stored vehicle repaired to its last launch snapshot"
 end

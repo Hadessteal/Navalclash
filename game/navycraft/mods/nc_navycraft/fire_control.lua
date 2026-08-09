@@ -26,10 +26,11 @@ end
 local function velocity_of(construct)
     local yaw = construct.yaw or 0
     local speed = construct.forward_speed or 0
+    local direction = core.yaw_to_dir and core.yaw_to_dir(yaw) or {x = -math.sin(yaw), y = 0, z = math.cos(yaw)}
     return {
-        x = math.sin(yaw) * speed,
+        x = (direction.x or 0) * speed,
         y = construct.vertical_speed or 0,
-        z = math.cos(yaw) * speed,
+        z = (direction.z or 0) * speed,
     }
 end
 

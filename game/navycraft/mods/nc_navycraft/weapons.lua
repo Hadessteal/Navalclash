@@ -20,10 +20,15 @@ end
 
 local function heading_vector(yaw, vertical)
     local horizontal = math.cos(vertical or 0)
+    local direction = core.yaw_to_dir and core.yaw_to_dir(yaw or 0) or {
+        x = -math.sin(yaw or 0),
+        y = 0,
+        z = math.cos(yaw or 0),
+    }
     return {
-        x = math.sin(yaw) * horizontal,
+        x = (direction.x or 0) * horizontal,
         y = math.sin(vertical or 0),
-        z = math.cos(yaw) * horizontal,
+        z = (direction.z or 0) * horizontal,
     }
 end
 
@@ -265,7 +270,7 @@ function W.fire(construct,player,weapon_id,options)
     local fired=0
     for i=1,(weapon.count or 1) do
         local lateral=(i-((weapon.count or 1)+1)/2)*.45
-        local offset={x=math.cos(heading)*lateral,y=0,z=-math.sin(heading)*lateral}
+        local offset={x=math.cos(heading)*lateral,y=0,z=math.sin(heading)*lateral}
         if spawn_projectile(construct,owner,weapon,origin,heading,pitch,target_id,depth_y,offset,options.launch_velocity) then fired=fired+1 end
     end
     if fired==0 then

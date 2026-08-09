@@ -1,0 +1,74 @@
+{
+  "description": "Default Minecraft-style texture candidates for NavyCraft/Luanti texture-pack output. Targets are Luanti texture filenames; candidates are namespace:path names without file extensions.",
+  "targets": {
+    "nc_frame.png": [
+      "minecraft:block/iron_block",
+      "minecraft:block/light_gray_concrete",
+      "minecraft:block/stone",
+      "minecraft:block/polished_andesite",
+      "minecraft:block/smooth_stone"
+    ],
+    "nc_helm_top.png": [
+      "minecraft:block/oak_planks",
+      "minecraft:block/spruce_planks",
+      "minecraft:block/dark_oak_planks",
+      "minecraft:block/barrel_top"
+    ],
+    "nc_helm_side.png": [
+      "minecraft:block/oak_planks",
+      "minecraft:block/spruce_planks",
+      "minecraft:block/dark_oak_planks",
+      "minecraft:block/barrel_side"
+    ],
+    "nc_helm_front.png": [
+      "minecraft:block/crafting_table_front",
+      "minecraft:block/barrel_front",
+      "minecraft:block/loom_front",
+      "minecraft:block/oak_planks"
+    ],
+    "nc_smoke.png": [
+      "minecraft:particle/smoke",
+      "minecraft:particle/large_smoke",
+      "minecraft:block/black_concrete_powder",
+      "minecraft:block/gray_concrete_powder"
+    ],
+    "nc_splash.png": [
+      "minecraft:particle/splash",
+      "minecraft:block/water_still",
+      "minecraft:block/blue_stained_glass"
+    ],
+    "nc_spark.png": [
+      "minecraft:particle/crit",
+      "minecraft:block/glowstone",
+      "minecraft:block/ochre_froglight"
+    ],
+    "nc_fire.png": [
+      "minecraft:block/fire_0",
+      "minecraft:block/fire_1",
+      "minecraft:particle/flame"
+    ],
+    "nc_bubble.png": [
+      "minecraft:particle/bubble",
+      "minecraft:block/light_blue_stained_glass"
+    ],
+    "c_inventory_panel.png": [
+      "minecraft:gui/container/inventory",
+      "minecraft:gui/container/generic_54",
+      "minecraft:block/gray_concrete"
+    ],
+    "c_mc_inventory.png": [
+      "minecraft:gui/container/inventory",
+      "minecraft:gui/container/generic_54"
+    ],
+    "c_hud_panel.png": [
+      "minecraft:gui/container/inventory",
+      "minecraft:block/gray_concrete",
+      "minecraft:block/dark_oak_planks"
+    ],
+    "c_player_silhouette.png": [
+      "minecraft:item/armor_stand",
+      "minecraft:block/white_concrete",
+      "minecraft:block/light_gray_concrete"
+    ]
+  }
+}

@@ -89,7 +89,7 @@ end
 local function group_damage(node_damage)
     local grouped = {}
     for _, damage in ipairs(node_damage or {}) do
-        if damage.destroyed and damage.construct_id then
+        if damage.construct_id then
             local key = tostring(damage.construct_id)
             grouped[key] = grouped[key] or {}
             grouped[key][#grouped[key] + 1] = damage

@@ -80,7 +80,13 @@ local function ship_dispatch(name,param,forced_type)
     if cmd==""or cmd=="help"then return true,ship_help()end
     if cmd=="info"or cmd=="update"then return c~=nil,c and S.summary(c)or"no active vessel"
     elseif cmd=="types"then local out={};for _,n in ipairs(D.craft_order)do local t=D.craft_types[n];out[#out+1]=string.format("%s %d-%d",n,t.min_blocks,t.max_blocks)end;return true,table.concat(out," | ")
-    elseif cmd=="drive"or cmd=="sail"or cmd=="pilot"or cmd=="dive"then if not c then return false,"no active vessel"end;local ok,msg=S.take_helm(c,name);save();return ok,msg
+    elseif cmd=="drive"or cmd=="sail"or cmd=="pilot"or cmd=="dive"then
+        if not c then return false,"no active vessel"end
+        local player=core.get_player_by_name(name)
+        local ok,msg
+        if player and navycraft.controls and navycraft.controls.take_helm then ok,msg=navycraft.controls.take_helm(c,player)
+        else ok,msg=S.take_helm(c,name) end
+        save();return ok,msg
     elseif cmd=="throttle"or cmd=="setspeed"then if not c then return false,"no active vessel"end;local v=tonumber(args[2]);if not v then return false,"number required"end;S.set_throttle(c,v>1 and v/100 or v);save();return true,S.summary(c)
     elseif cmd=="gear"then if not c then return false,"no active vessel"end;S.set_gear(c,tonumber(args[2])or 0);save();return true,S.summary(c)
     elseif cmd=="rudder"then
@@ -99,7 +105,12 @@ local function ship_dispatch(name,param,forced_type)
     elseif cmd=="dock"then local cc,e=commander(name);if not cc then return false,e end;return navycraft.preview.dock(cc.owner)
     elseif cmd=="name"or cmd=="setname"then local cc,e=commander(name);if not cc then return false,e end;cc.systems.custom_name=join(args,2):sub(1,32);save();return true,"Vessel named "..cc.systems.custom_name
     elseif cmd=="remote"then if not c then return false,"no active vessel"end;c.systems.remote_control=not c.systems.remote_control;save();return true,"Remote control "..bool(c.systems.remote_control)
-    elseif cmd=="release"or cmd=="leave"then local cc,e=commander(name);if not cc then return false,e end;local ok,msg=S.release(cc,name);save();return ok,msg
+    elseif cmd=="release"or cmd=="leave"then
+        if navycraft.preview and navycraft.preview.release_helm then
+            local ok,msg=navycraft.preview.release_helm(name)
+            if ok then save();return true,msg or"Helm released" end
+        end
+        local cc,e=commander(name);if not cc then return false,e end;local ok,msg=S.release(cc,name);save();return ok,msg
     elseif cmd=="takeover"or cmd=="claim"then if not c then local p=core.get_player_by_name(name);c=navycraft.preview.find_nearest(p:get_pos(),12)end;if not c then return false,"no vessel nearby"end;local ok,msg=S.takeover(c,name);if ok and msg=="takeover complete"then c.owner=name;c.systems.owner=name end;save();return ok,msg
     elseif cmd=="crew"then
         if not c then return false,"no active vessel"end;local sub=(args[2]or"list"):lower()
@@ -257,7 +268,7 @@ local function navycraft_dispatch(name,param)
         local out={};for id,c in pairs(navycraft.preview.get_all())do out[#out+1]=string.format("%s %s owner=%s route=%s:%s",id,c.profile and c.profile.craft_type or"?",c.systems and c.systems.owner or c.owner,c.systems and c.systems.route_id or"",c.systems and c.systems.route_stage or 0)end;table.sort(out);return true,#out>0 and table.concat(out," | ")or"no loaded vessels"
     elseif cmd=="reload"then save();return true,"NavyCraft state saved; Luanti mods require a server restart to reload code"
     elseif cmd=="debug"or cmd=="loglevel"then return true,"Debug command acknowledged; use Luanti debug.txt for runtime output"
-    elseif cmd=="config"then return true,string.format("releaseDelay=%ds teleportCooldown=%ds scuttle=%ds pumpCharge=%d hyper=%dx",D.source.craft_release_delay,D.source.ship_teleport_cooldown,D.source.scuttle_delay,D.source.pump_charge_limit,D.source.hyperspace_move_multiplier)
+    elseif cmd=="config"then return true,string.format("releaseDelay=%ds conversionTimer=%.1fs teleportCooldown=%ds scuttle=%ds pumpCharge=%d hyper=%dx",D.source.craft_release_delay,D.source.construct_conversion_delay or 1,D.source.ship_teleport_cooldown,D.source.scuttle_delay,D.source.pump_charge_limit,D.source.hyperspace_move_multiplier)
     elseif cmd=="spawntimer"then return true,"Stored vehicle spawn is immediate in this Luanti adaptation"
     elseif cmd=="weapons"or cmd=="cannons"then local out={};for _,id in ipairs(D.weapon_order)do out[#out+1]=id..":"..D.weapons[id].display end;return true,table.concat(out," | ")
     elseif cmd=="projectiles"then local native=navycraft.projectiles and navycraft.projectiles.native_available();local count=navycraft.projectiles and navycraft.projectiles.count()or 0;return true,string.format("projectile_engine=%s active=%d",native and "native" or "fallback",count)

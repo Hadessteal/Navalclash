@@ -16,7 +16,9 @@ def assert_applied_overlay(root: Path) -> None:
     server_opcodes = (root / "src" / "network" / "serveropcodes.cpp").read_text(encoding="utf-8")
     client_h = (root / "src" / "client" / "client.h").read_text(encoding="utf-8")
     client_cpp = (root / "src" / "client" / "client.cpp").read_text(encoding="utf-8")
+    gameui_cpp = (root / "src" / "client" / "gameui.cpp").read_text(encoding="utf-8")
     localplayer_cpp = (root / "src" / "client" / "localplayer.cpp").read_text(encoding="utf-8")
+    chat_console_cpp = (root / "src" / "gui" / "guiChatConsole.cpp").read_text(encoding="utf-8")
     server_h = (root / "src" / "server.h").read_text(encoding="utf-8")
     server_packets = (root / "src" / "network" / "serverpackethandler.cpp").read_text(encoding="utf-8")
     server_cpp = (root / "src" / "server.cpp").read_text(encoding="utf-8")
@@ -73,6 +75,9 @@ def assert_applied_overlay(root: Path) -> None:
     assert client_cpp.count('#include "navycraft/client/client_construct_effects.h"') == 1
     assert client_cpp.count('#include "navycraft/client/client_construct_scene.h"') == 1
     assert "prepareNavyCraftLocalPlayerForPhysics" not in client_cpp
+    assert "const s32 hotbar_clearance = 62;" in gameui_cpp
+    assert "window_size.Y - hotbar_clearance - chat_height" in gameui_cpp
+    assert "m_screensize.Y - m_height" in chat_console_cpp
     assert localplayer_cpp.count("beginNavyCraftLocalPlayerMove") == 1
     assert localplayer_cpp.count("finishNavyCraftLocalPlayerMove") == 1
     begin_index = localplayer_cpp.index("beginNavyCraftLocalPlayerMove")
@@ -128,6 +133,10 @@ def assert_applied_overlay(root: Path) -> None:
     assert "result.touching_ground = input.touching_ground;" not in client_scene
     assert "pending.touching_ground ||" not in client_scene
     assert "bool grounded = input.touching_ground || collision.touching_ground;" in client_scene
+    assert "MapNode lit_air(CONTENT_AIR, 0x0f, 0)" in client_scene
+    assert "MapNode lit_air(CONTENT_AIR, 0xff, 0)" not in client_scene
+    assert client_scene.count("setAutomaticCulling(scene::EAC_OFF)") >= 2
+    assert "setAutomaticCulling(scene::EAC_BOX)" not in client_scene
     script_api = (root / "src" / "navycraft" / "script_api.cpp").read_text(encoding="utf-8")
     assert "resolve_dynamic_construct_mutation" in script_api
     assert "initialise_dynamic_construct_persistence" in script_api
@@ -161,16 +170,16 @@ def assert_applied_overlay(root: Path) -> None:
 def assert_project_sources() -> None:
     native_state = (PROJECT / "game" / "navycraft" / "mods" / "nc_core" /
         "native_construct_state.lua").read_text(encoding="utf-8")
-    assert "local function send_drive_velocity(construct,force)" in native_state
+    assert "send_drive_velocity = function(construct,force)" in native_state
     assert "mark_motion_sent(construct)" in native_state
     assert "if math.abs(construct.yaw_rate or 0)>0.0001 and math.abs(construct.forward_speed or 0)>0.0001" not in native_state
     restore = native_state[native_state.index("local function restore_saved_constructs"):]
     assert "state=core.get_dynamic_construct(native_id,false)" in restore
     assert "native_id,error_message=create_native" in restore
-    assert restore.index("state=core.get_dynamic_construct(native_id,false)") < restore.index("native_id,error_message=create_native")
+    assert restore.index("native_id,error_message=create_native") < restore.index("state=core.get_dynamic_construct(native_id,false)")
     assert "send_drive_velocity(saved,true)" in restore
     assert "function M.find_at_world_node(world_pos)" in native_state
-    assert "vector.distance(exact,rounded)<0.65" in native_state
+    assert "vector.distance(exact,rounded)<1.25" in native_state
     assert "local function clear_source_nodes(scan_result)" in native_state
     assert "core.remove_node(entry.pos)" in native_state
     assert "source blocks were not cleared" in native_state
@@ -240,10 +249,10 @@ def assert_project_sources() -> None:
     core_init = (PROJECT / "game" / "navycraft" / "mods" / "nc_core" /
         "init.lua").read_text(encoding="utf-8")
     launch = core_init[core_init.index("local function launch_from_origin"):]
-    assert "construct_state.get_for_owner(name)" in launch
     assert "construct_state.find_at_world_node(origin)" in launch
+    assert "construct_state.request_convert_to_blocks(active, name)" in launch
     assert "construct_state.untracked_runtime_count" in launch
-    assert launch.index("construct_state.get_for_owner(name)") < launch.index("scan_from_origin(player, origin)")
+    assert launch.index("construct_state.find_at_world_node(origin)") < launch.index("scan_from_origin(player, origin)")
     assert 'core.register_chatcommand("nc_purge_constructs"' in core_init
 
     item_tooltips = (PROJECT / "game" / "navycraft" / "mods" / "nc_core" /
@@ -268,7 +277,10 @@ def assert_project_sources() -> None:
         "controls.lua").read_text(encoding="utf-8")
     assert "core.register_globalstep(function()" in controls
     assert "S.speed_change(c,true)" in controls
-    assert "S.gear_change(c,true)" in controls
+    assert "local function set_forward(c)" in controls
+    assert "local function set_reverse(c)" in controls
+    assert "S.set_gear(c,1)" in controls
+    assert "S.set_gear(c,-1)" in controls
     assert "S.rudder_order(c,1,true)" in controls
 
 assert_project_sources()
@@ -278,6 +290,7 @@ with tempfile.TemporaryDirectory(prefix="navycraft-overlay-") as directory:
     (root / "src" / "script").mkdir(parents=True)
     (root / "src" / "network").mkdir(parents=True)
     (root / "src" / "client").mkdir(parents=True)
+    (root / "src" / "gui").mkdir(parents=True)
 
     (root / "src" / "CMakeLists.txt").write_text(
         "add_subdirectory(server)\n\n"
@@ -374,6 +387,26 @@ with tempfile.TemporaryDirectory(prefix="navycraft-overlay-") as directory:
         "void Client::interact(InteractAction action, const PointedThing& pointed)\n{\n}\n",
         encoding="utf-8",
     )
+    (root / "src" / "client" / "gameui.cpp").write_text(
+        "void GameUI::updateChatSize()\n"
+        "{\n"
+        "\t// Update gui element size and position\n"
+        "\ts32 chat_y = 5;\n\n"
+        "\tif (m_flags.show_minimal_debug)\n"
+        "\t\tchat_y += m_guitext->getTextHeight();\n"
+        "\tif (m_flags.show_basic_debug)\n"
+        "\t\tchat_y += m_guitext2->getTextHeight();\n\n"
+        "\tconst v2u32 window_size = RenderingEngine::getWindowSize();\n\n"
+        "\tcore::rect<s32> chat_size(10, chat_y, window_size.X - 20, 0);\n"
+        "\tchat_size.LowerRightCorner.Y = std::min((s32)window_size.Y,\n"
+        "\t\t\tm_guitext_chat->getTextHeight() + chat_y);\n\n"
+        "\tif (chat_size == m_current_chat_size)\n"
+        "\t\treturn;\n"
+        "\tm_current_chat_size = chat_size;\n\n"
+        "\tm_guitext_chat->setRelativePosition(chat_size);\n"
+        "}\n",
+        encoding="utf-8",
+    )
     (root / "src" / "client" / "localplayer.cpp").write_text(
         "void LocalPlayer::move(float dtime, Environment *env) {\n"
         "\tv3f position; v3f m_speed; float gravity = 1;\n"
@@ -390,6 +423,15 @@ with tempfile.TemporaryDirectory(prefix="navycraft-overlay-") as directory:
         "\t\tSet new position but keep sneak node set\n"
         "\t*/\n"
         "\tsetPosition(position);\n"
+        "}\n",
+        encoding="utf-8",
+    )
+    (root / "src" / "gui" / "guiChatConsole.cpp").write_text(
+        "void GUIChatConsole::recalculateConsolePosition()\n"
+        "{\n"
+        "\tcore::rect<s32> rect(0, 0, m_screensize.X, m_height);\n"
+        "\tDesiredRect = rect;\n"
+        "\trecalculateAbsolutePosition(false);\n"
         "}\n",
         encoding="utf-8",
     )

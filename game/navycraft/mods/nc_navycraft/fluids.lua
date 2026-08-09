@@ -89,8 +89,12 @@ local function apply_status(status)
     if not construct or not construct.systems then return end
     construct.systems.native_liquid_fraction=tonumber(status.fill_fraction)or 0
     construct.systems.native_liquid_units=tonumber(status.total_units)or 0
+    if (tonumber(construct.systems.breach_count) or 0)<=0 and not construct.systems.sinking then
+        return
+    end
     local displacement=math.max(1,tonumber(construct.systems.displacement)or tonumber(construct.profile and construct.profile.displacement)or 1)
-    construct.systems.flooding=math.max(0,construct.systems.native_liquid_fraction*displacement)
+    construct.systems.flooding=math.max(tonumber(construct.systems.flooding) or 0,
+        construct.systems.native_liquid_fraction*displacement)
 end
 
 function M.step(dt)

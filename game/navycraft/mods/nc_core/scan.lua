@@ -10,6 +10,10 @@ function M.default_allowed(pos, node)
     if node.name == "air" or node.name == "ignore" then return false end
     local definition = core.registered_nodes[node.name]
     if not definition then return false end
+    local meta = core.get_meta(pos)
+    if meta and (meta:get_string("navycraft_wreck") == "1" or meta:get_string("navycraft_wreck_id") ~= "") then
+        return false
+    end
     if definition.liquidtype and definition.liquidtype ~= "none" then return false end
     local groups = definition.groups or {}
     return (groups.navycraft_hull or 0) > 0 or

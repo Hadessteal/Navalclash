@@ -1,5 +1,6 @@
 -- Native structural connectivity and wreck-fragment bridge for Milestone 4L.
 local M={states={},last_events={},last_step_frame=nil}
+local STRUCTURE_AUDIO_ENABLED=false
 
 local function protocol_version()
     if type(core.get_dynamic_construct_protocol_version)~="function" then return 0 end
@@ -26,7 +27,7 @@ local function sync_game_flooding()
         if construct.native_id and construct.systems then
             local systems=construct.systems
             local displacement=math.max(1,tonumber(systems.displacement)or tonumber(systems.block_count)or #(construct.nodes or{}))
-            local flooded=tonumber(systems.flooded_volume)or tonumber(systems.flooding)or 0
+            local flooded=tonumber(systems.flooding)or 0
             pcall(core.set_dynamic_construct_flooding,construct.native_id,math.max(0,math.min(1,flooded/displacement)))
         end
     end
@@ -43,7 +44,23 @@ local function apply_state(state)
             construct.systems.native_structural_role=state.role
             construct.systems.native_buoyancy_force=state.buoyancy_force
             construct.systems.native_weight_force=state.weight_force
-            if state.sinking then construct.systems.sinking=true end
+            construct.systems.native_afloat=state.afloat and true or false
+            construct.systems.native_sunk=state.sunk and true or false
+            construct.systems.native_sinking=state.sinking and true or false
+            local integrity=tonumber(construct.systems.hull_integrity) or 1
+            local displacement=math.max(1,tonumber(construct.systems.displacement) or 1)
+            local flooded=(tonumber(construct.systems.flooding) or 0)/displacement
+            local breaches=(tonumber(construct.systems.breach_count) or 0)>0
+            local negative_buoyancy=(tonumber(construct.systems.buoyancy) or 0)<0
+            local gameplay_critical=construct.systems.helm_destroyed or integrity<.28 or flooded>=.75 or
+                (breaches and integrity<.45)
+            local native_critical=(state.sinking or state.sunk) and
+                (negative_buoyancy or breaches or flooded>=.1 or integrity<.45)
+            local critical=gameplay_critical or native_critical
+            if critical then
+                construct.systems.sinking=true
+            end
+            if state.sunk then construct.systems.sunk=true end
             break
         end
     end
@@ -57,10 +74,12 @@ local function emit_split_effect(event)
             texture="nc_spark.png",amount=24,lifetime_min=.25,lifetime_max=.8,
             size_min=.35,size_max=1.3,velocity={x=0,y=1.4,z=0},glow=8,
         })
-        pcall(core.emit_dynamic_construct_effect,fragment_id,{
-            kind="sound",preset="damage_sparks",local_pos={x=0,y=0,z=0},
-            sound="nc_hull_hit",gain=.9,pitch=1,max_distance=96,
-        })
+        if STRUCTURE_AUDIO_ENABLED then
+            pcall(core.emit_dynamic_construct_effect,fragment_id,{
+                kind="sound",preset="damage_sparks",local_pos={x=0,y=0,z=0},
+                sound="nc_hull_hit",gain=.9,pitch=1,max_distance=96,
+            })
+        end
     end
 end
 

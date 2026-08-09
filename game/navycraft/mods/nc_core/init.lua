@@ -12,6 +12,7 @@ navycraft.construct_state = construct_state
 -- Compatibility alias for source-derived gameplay modules. This is native
 -- construct state, not a renderer or movement fallback.
 navycraft.preview = construct_state
+navycraft.construct_visuals = dofile(modpath .. "/construct_visuals.lua")
 -- Rider contact, collision and platform displacement are native-engine
 -- responsibilities. The former Lua rider-safety teleporter is deliberately
 -- not loaded in native builds.
@@ -48,15 +49,29 @@ end
 
 local function launch_from_origin(player, origin)
     local name = player:get_player_name()
-    if construct_state.get_for_owner(name) then
-        core.chat_send_player(name, "Launch blocked: dock or remove your active vessel first")
-        return false
-    end
     if construct_state.find_at_world_node then
-        local active = construct_state.find_at_world_node(origin)
+        local active, index = construct_state.find_at_world_node(origin)
         if active then
-            core.chat_send_player(name, "Launch blocked: target block is already part of a moving vessel")
-            return false
+            if player:get_player_control().sneak and construct_state.request_convert_to_blocks then
+                if active.owner ~= name and not core.check_player_privs(name, {server = true}) then
+                    core.chat_send_player(name, "Only the owner may convert this construct")
+                    return false
+                end
+                local ok, message = construct_state.request_convert_to_blocks(active, name)
+                core.chat_send_player(name, message or (ok and "Construct conversion armed" or "Construct conversion failed"))
+                return ok
+            end
+            local ok, message
+            if navycraft.controls and navycraft.controls.take_helm then
+                ok, message = navycraft.controls.take_helm(active, player, index)
+            elseif navycraft.systems and navycraft.systems.take_helm then
+                ok, message = navycraft.systems.take_helm(active, name)
+            end
+            if ok then
+                return true, message or "Helm engaged"
+            end
+            core.chat_send_player(name, message or "Launch blocked: target block is already part of a moving vessel")
+            return false, message
         end
     end
     if construct_state.untracked_runtime_count and construct_state.untracked_runtime_count() > 0 then
@@ -86,6 +101,10 @@ local function launch_from_origin(player, origin)
     if not construct_id then
         core.chat_send_player(player:get_player_name(), "Launch failed: " .. mode_or_error)
         return false
+    end
+    if navycraft.controls and navycraft.controls.take_helm then
+        local active = construct_state.get_by_id(construct_id)
+        if active then navycraft.controls.take_helm(active, player) end
     end
     core.chat_send_player(player:get_player_name(),
         "Launched " .. construct_id .. " using " .. mode_or_error)
@@ -145,17 +164,6 @@ core.register_node("nc_core:ground", {
     tiles = {"nc_frame.png^[colorize:#554433:120"},
     groups = {cracky = 3},
 })
-
-for _, alias in ipairs({
-    "mapgen_stone", "mapgen_dirt", "mapgen_dirt_with_grass", "mapgen_sand",
-}) do
-    core.register_alias(alias, "nc_core:ground")
-end
-core.register_alias("mapgen_water_source", "nc_core:water_source")
-core.register_alias("mapgen_river_water_source", "nc_core:water_source")
-for _, alias in ipairs({"mapgen_lava_source", "mapgen_tree", "mapgen_leaves", "mapgen_apple"}) do
-    core.register_alias(alias, "air")
-end
 
 core.register_node("nc_core:frame", {
     description = "NavyCraft Test Frame",
@@ -283,6 +291,178 @@ core.register_chatcommand("nc_purge_constructs", {
     func = function(name)
         local ok, message = construct_state.purge_all("manual_test_purge")
         return ok, message
+    end,
+})
+
+local function test_ship_forward(player)
+    local look = player:get_look_dir()
+    if math.abs(look.x) > math.abs(look.z) then
+        return {x = look.x >= 0 and 1 or -1, y = 0, z = 0}
+    end
+    return {x = 0, y = 0, z = look.z >= 0 and 1 or -1}
+end
+
+local function test_ship_right(forward)
+    return {x = forward.z, y = 0, z = -forward.x}
+end
+
+local function test_ship_world_pos(origin, right, forward, local_pos)
+    return {
+        x = origin.x + right.x * local_pos.x + forward.x * local_pos.z,
+        y = origin.y + local_pos.y,
+        z = origin.z + right.z * local_pos.x + forward.z * local_pos.z,
+    }
+end
+
+local function test_ship_layout()
+    local nodes = {}
+    local by_key = {}
+
+    local function set_node(x, y, z, name)
+        local key = x .. ":" .. y .. ":" .. z
+        local spec = by_key[key]
+        if not spec then
+            spec = {local_pos = {x = x, y = y, z = z}, name = name}
+            by_key[key] = spec
+            nodes[#nodes + 1] = spec
+        else
+            spec.name = name
+        end
+    end
+
+    for z = -7, 7 do
+        for x = -3, 3 do
+            local edge = math.abs(x) == 3 or math.abs(z) == 7
+            set_node(x, 0, z, edge and "nc_navycraft:hull_wood" or "nc_navycraft:lift_cell")
+        end
+    end
+
+    for z = -6, 6 do
+        set_node(-4, 0, z, "nc_navycraft:hull_wood")
+        set_node(4, 0, z, "nc_navycraft:hull_wood")
+    end
+
+    for z = -5, 5 do
+        set_node(-4, -1, z, "nc_navycraft:lift_cell")
+        set_node(4, -1, z, "nc_navycraft:lift_cell")
+        set_node(-2, -1, z, "nc_navycraft:hull_wood")
+        set_node(2, -1, z, "nc_navycraft:hull_wood")
+    end
+
+    for z = -5, 5 do
+        set_node(-4, 1, z, "nc_navycraft:hull_wood")
+        set_node(4, 1, z, "nc_navycraft:hull_wood")
+    end
+
+    set_node(0, 1, 5, "nc_navycraft:helm")
+    set_node(-1, 1, 4, "nc_navycraft:telegraph")
+    set_node(1, 1, 4, "nc_navycraft:rudder")
+    set_node(-1, 1, 1, "nc_navycraft:engine_boiler_1")
+    set_node(1, 1, 1, "nc_navycraft:engine_boiler_1")
+    set_node(0, 1, -1, "nc_navycraft:nav")
+    set_node(0, 1, -2, "nc_navycraft:buoyancy")
+    set_node(-2, 1, -3, "nc_navycraft:pump")
+    set_node(2, 1, -3, "nc_navycraft:pump")
+    set_node(-2, 1, 2, "nc_navycraft:ballast")
+    set_node(2, 1, 2, "nc_navycraft:ballast")
+    set_node(0, 1, -5, "nc_navycraft:weapon_single_cannon")
+    set_node(0, 1, -6, "nc_navycraft:firecontrol")
+
+    return nodes
+end
+
+local function test_ship_can_replace(pos)
+    local node = core.get_node_or_nil(pos)
+    if not node then return false, "unloaded map" end
+    if node.name == "air" then return true end
+    local def = core.registered_nodes[node.name]
+    if def and def.buildable_to then return true end
+    if def and def.liquidtype and def.liquidtype ~= "none" then return true end
+    return false, node.name
+end
+
+local function test_ship_facedir(name, forward)
+    local def = core.registered_nodes[name]
+    if def and def.paramtype2 == "facedir" and core.dir_to_facedir then
+        return core.dir_to_facedir(forward, false)
+    end
+    return 0
+end
+
+local function configure_test_ship_node(pos, name)
+    local meta = core.get_meta(pos)
+    if name == "nc_navycraft:helm" then
+        meta:set_string("craft_type", "ship")
+        meta:set_string("infotext", "NavyCraft Helm [ship]")
+    elseif name == "nc_navycraft:engine_boiler_1" then
+        meta:set_string("enabled", "true")
+        meta:set_string("infotext", "Boiler 1 [ON]")
+    elseif name == "nc_navycraft:telegraph" then
+        meta:set_string("infotext", "Engine Telegraph")
+    elseif name == "nc_navycraft:rudder" then
+        meta:set_string("infotext", "Rudder Control")
+    elseif name == "nc_navycraft:nav" then
+        meta:set_string("infotext", "Navigation Control")
+    elseif name == "nc_navycraft:buoyancy" then
+        meta:set_string("infotext", "Buoyancy Indicator")
+    elseif name == "nc_navycraft:pump" then
+        meta:set_string("infotext", "Pump")
+    elseif name == "nc_navycraft:ballast" then
+        meta:set_string("infotext", "Ballast Tanks")
+    elseif name == "nc_navycraft:weapon_single_cannon" then
+        meta:set_int("weapon_type", 0)
+        meta:set_string("infotext", "Single Cannon")
+    elseif name == "nc_navycraft:firecontrol" then
+        meta:set_string("infotext", "Fire Control")
+    end
+end
+
+core.register_chatcommand("nc_testship", {
+    params = "[force]",
+    description = "Spawn a connected NavyCraft test ship in front of you. Use force to overwrite solid blockers.",
+    privs = {interact = true},
+    func = function(name, param)
+        local player = core.get_player_by_name(name)
+        if not player then return false, "player unavailable" end
+
+        local force = tostring(param or ""):lower():find("force", 1, true) ~= nil
+        local forward = test_ship_forward(player)
+        local right = test_ship_right(forward)
+        local origin = vector.round(vector.add(player:get_pos(), vector.multiply(forward, 8)))
+        origin.y = math.floor(player:get_pos().y)
+        local layout = test_ship_layout()
+
+        for _, spec in ipairs(layout) do
+            if not core.registered_nodes[spec.name] then
+                return false, "Test ship node is not registered: " .. spec.name
+            end
+        end
+
+        local blocked = {}
+        for _, spec in ipairs(layout) do
+            local pos = test_ship_world_pos(origin, right, forward, spec.local_pos)
+            if core.is_protected(pos, name) then
+                blocked[#blocked + 1] = core.pos_to_string(pos) .. " protected"
+            else
+                local ok, reason = test_ship_can_replace(pos)
+                if not ok and not force then
+                    blocked[#blocked + 1] = core.pos_to_string(pos) .. " " .. reason
+                end
+            end
+            if #blocked >= 6 then break end
+        end
+
+        if #blocked > 0 then
+            return false, "Test ship spawn blocked. Move to open water/air or use /nc_testship force. First blockers: " .. table.concat(blocked, ", ")
+        end
+
+        for _, spec in ipairs(layout) do
+            local pos = test_ship_world_pos(origin, right, forward, spec.local_pos)
+            core.set_node(pos, {name = spec.name, param2 = test_ship_facedir(spec.name, forward)})
+            configure_test_ship_node(pos, spec.name)
+        end
+
+        return true, "Spawned " .. tostring(#layout) .. "-block NavyCraft test ship. Click the helm to launch and take control."
     end,
 })
 

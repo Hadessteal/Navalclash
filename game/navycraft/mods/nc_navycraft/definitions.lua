@@ -1,6 +1,22 @@
 -- Source-derived definitions from NavyCraft 1.1.1-iizDevBuild and
 -- NavyCraft-Shipyard 3.1.5. This file contains data only; implementation is
 -- original Luanti code.
+local function numeric_setting(names, default_value, minimum, maximum)
+    if type(names) == "string" then names = {names} end
+    local settings = rawget(_G, "core") and core.settings or nil
+    if settings and type(settings.get) == "function" then
+        for _, name in ipairs(names or {}) do
+            local value = tonumber(settings:get(name))
+            if value then
+                if minimum then value = math.max(minimum, value) end
+                if maximum then value = math.min(maximum, value) end
+                return value
+            end
+        end
+    end
+    return default_value
+end
+
 local D = {}
 
 D.source = {
@@ -16,6 +32,11 @@ D.source = {
     air_disp_value = 15.0,
     minimum_disp_value = 0.33,
     weight_multiplier = 1.0,
+    construct_conversion_delay = numeric_setting({
+        "navalclash_construct_conversion_timer",
+        "navalclash_conversion_timer",
+        "navycraft_construct_conversion_timer",
+    }, 1, 0, 600),
 }
 
 D.craft_order = {"boat", "ship", "freeship", "halfship", "aircraft", "airship", "submarine", "tank"}

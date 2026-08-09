@@ -21,7 +21,9 @@ required = {
     "serverpackethandler": luanti / "src" / "network" / "serverpackethandler.cpp",
     "client_h": luanti / "src" / "client" / "client.h",
     "client_cpp": luanti / "src" / "client" / "client.cpp",
+    "gameui_cpp": luanti / "src" / "client" / "gameui.cpp",
     "localplayer_cpp": luanti / "src" / "client" / "localplayer.cpp",
+    "chat_console_cpp": luanti / "src" / "gui" / "guiChatConsole.cpp",
     "server_h": luanti / "src" / "server.h",
     "server_cpp": luanti / "src" / "server.cpp",
     "mapblock_mesh_h": luanti / "src" / "client" / "mapblock_mesh.h",
@@ -42,6 +44,77 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
     if old not in text:
         raise SystemExit(f"Luanti layout changed: {label} anchor missing")
     return text.replace(old, new, 1)
+
+# Keep chat and command input out of the top-left status/HUD area.
+gameui_cpp = required["gameui_cpp"]
+text = gameui_cpp.read_text(encoding="utf-8")
+recent_chat_old = '''void GameUI::updateChatSize()
+{
+\t// Update gui element size and position
+\ts32 chat_y = 5;
+
+\tif (m_flags.show_minimal_debug)
+\t\tchat_y += m_guitext->getTextHeight();
+\tif (m_flags.show_basic_debug)
+\t\tchat_y += m_guitext2->getTextHeight();
+
+\tconst v2u32 window_size = RenderingEngine::getWindowSize();
+
+\tcore::rect<s32> chat_size(10, chat_y, window_size.X - 20, 0);
+\tchat_size.LowerRightCorner.Y = std::min((s32)window_size.Y,
+\t\t\tm_guitext_chat->getTextHeight() + chat_y);
+
+\tif (chat_size == m_current_chat_size)
+\t\treturn;
+\tm_current_chat_size = chat_size;
+
+\tm_guitext_chat->setRelativePosition(chat_size);
+}
+'''
+recent_chat_new = '''void GameUI::updateChatSize()
+{
+\tconst v2u32 window_size = RenderingEngine::getWindowSize();
+\tconst s32 margin = 10;
+\tconst s32 hotbar_clearance = 62;
+\tconst s32 chat_height = m_guitext_chat->getTextHeight();
+\ts32 chat_y = (s32)window_size.Y - hotbar_clearance - chat_height;
+\tif (chat_y < margin)
+\t\tchat_y = margin;
+
+\tcore::rect<s32> chat_size(
+\t\t\tmargin,
+\t\t\tchat_y,
+\t\t\t(s32)window_size.X - margin,
+\t\t\t(s32)window_size.Y - hotbar_clearance);
+
+\tif (chat_size == m_current_chat_size)
+\t\treturn;
+\tm_current_chat_size = chat_size;
+
+\tm_guitext_chat->setRelativePosition(chat_size);
+}
+'''
+text = replace_once(text, recent_chat_old, recent_chat_new, "bottom-left recent chat placement")
+gameui_cpp.write_text(text, encoding="utf-8")
+
+chat_console_cpp = required["chat_console_cpp"]
+text = chat_console_cpp.read_text(encoding="utf-8")
+console_old = '''void GUIChatConsole::recalculateConsolePosition()
+{
+\tcore::rect<s32> rect(0, 0, m_screensize.X, m_height);
+\tDesiredRect = rect;
+\trecalculateAbsolutePosition(false);
+}
+'''
+console_new = '''void GUIChatConsole::recalculateConsolePosition()
+{
+\tcore::rect<s32> rect(0, m_screensize.Y - m_height, m_screensize.X, m_screensize.Y);
+\tDesiredRect = rect;
+\trecalculateAbsolutePosition(false);
+}
+'''
+text = replace_once(text, console_old, console_new, "bottom-left chat console placement")
+chat_console_cpp.write_text(text, encoding="utf-8")
 
 # Build wiring.
 cmake = required["cmake"]

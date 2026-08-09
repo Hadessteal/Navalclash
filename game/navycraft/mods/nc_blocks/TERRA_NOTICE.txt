@@ -1,0 +1,13 @@
+NavyCraft terrain generation references Terra's architecture at a design level:
+noise-driven terrain, biome/palette selection, ore distribution, and feature
+placement.
+
+Terra archive inspected: C:\Users\brett\Downloads\Terra-master.zip
+
+Terra README states:
+- API and core addons: MIT License.
+- platform-agnostic implementations and platform implementations: GPL-3.0.
+
+NavyCraft does not embed Terra's Java/Kotlin runtime implementation. Luanti mods
+run Lua, so the terrain generator here is a Lua implementation that maps terrain
+materials to NavyCraft's nc_blocks namespace.

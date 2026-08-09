@@ -7,6 +7,19 @@ local N={}
 local function tell(player,message)
     if player and player:is_player() then core.chat_send_player(player:get_player_name(),message) end
 end
+local function take_helm(construct,player,node_index)
+    if not construct or not player then return false,"no active vessel" end
+    if navycraft.controls and navycraft.controls.take_helm then
+        return navycraft.controls.take_helm(construct,player,node_index)
+    end
+    return S.take_helm(construct,player:get_player_name())
+end
+local function convert_to_blocks(construct,player)
+    if not construct or not player then return false,"no active vessel" end
+    if not S.authorized(construct,player,"captain") then return false,"only the captain or owner may convert the vessel" end
+    if not (navycraft.preview and navycraft.preview.request_convert_to_blocks) then return false,"vessel conversion unavailable" end
+    return navycraft.preview.request_convert_to_blocks(construct,player:get_player_name())
+end
 local function nearest_active(player,range)
     local construct,distance=navycraft.preview.find_nearest(player:get_pos(),range or 16)
     return construct,distance
@@ -59,6 +72,17 @@ core.register_node("nc_navycraft:helm",{
     on_rightclick=function(pos,node,player)
         if not player or not player:is_player() then return end
         local meta=core.get_meta(pos)
+        local active,index=navycraft.preview and navycraft.preview.find_at_world_node and navycraft.preview.find_at_world_node(pos)
+        if active then
+            if player:get_player_control().sneak then
+                local ok,msg=convert_to_blocks(active,player)
+                tell(player,msg or (ok and "Vessel conversion armed" or "Vessel conversion failed"))
+                return
+            end
+            local ok,msg=take_helm(active,player,index)
+            tell(player,msg or (ok and "Helm engaged" or "Helm control denied"))
+            return
+        end
         if player:get_player_control().sneak then
             local current=meta:get_string("craft_type");local found=1
             for i,v in ipairs(D.craft_order) do if v==current then found=i end end
@@ -73,6 +97,13 @@ core.register_node("nc_navycraft:helm",{
         result.navycraft_profile=profile
         local id,mode=navycraft.construct.launch(player,result)
         if not id then tell(player,"NavyCraft launch failed: "..mode);return end
+        local construct=navycraft.preview and navycraft.preview.get_by_id and navycraft.preview.get_by_id(id)
+        local helm_index
+        if navycraft.preview and navycraft.preview.find_at_world_node then
+            local active,index=navycraft.preview.find_at_world_node(pos)
+            if active and active.id==id then construct=active;helm_index=index end
+        end
+        if construct then take_helm(construct,player,helm_index) end
         tell(player,"Launched "..craft_type.." "..id.." using "..mode)
     end,
 })
@@ -153,10 +184,21 @@ core.register_node("nc_navycraft:explosion_debug",{
 
 function N.handle_moving_interaction(construct,node_index,player,action)
     if not construct.profile or not construct.systems then return false end
-    if not S.authorized(construct,player,"crew") then tell(player,"You are not on this vessel's crew.");return true end
-    local entry=construct.nodes[node_index];if not entry or entry.destroyed then return false end
+    local entry=construct.nodes and construct.nodes[node_index];if not entry or entry.destroyed then return false end
     local def=core.registered_nodes[entry.name];if not def then return false end
     local component=def._navycraft_component
+    if component=="helm" and action=="rightclick" and player and player:get_player_control().sneak then
+        local ok,msg=convert_to_blocks(construct,player)
+        tell(player,msg or (ok and "Vessel conversion armed" or "Vessel conversion failed"))
+        return true
+    end
+    if action=="rightclick" and navycraft.preview and navycraft.preview.player_helm_construct
+            and navycraft.preview.player_helm_construct(player)==construct
+            and navycraft.controls and navycraft.controls.take_helm then
+        navycraft.controls.take_helm(construct,player,node_index)
+        return true
+    end
+    if not S.authorized(construct,player,"crew") then tell(player,"You are not on this vessel's crew.");return true end
     if def._navycraft_engine_key and action=="rightclick" then
         local enabled=S.toggle_engine(construct,node_index);tell(player,D.engines[def._navycraft_engine_key].display..(enabled and " set ON" or " set OFF"));navycraft.preview.save();return true
     end
@@ -208,7 +250,7 @@ function N.handle_moving_interaction(construct,node_index,player,action)
     elseif component=="buoyancy" and action=="rightclick" then tell(player,S.summary(construct))
     elseif component=="helm" and action=="rightclick" then
         if navycraft.controls and navycraft.controls.take_helm then
-            navycraft.controls.take_helm(construct,player)
+            navycraft.controls.take_helm(construct,player,node_index)
         else
             S.take_helm(construct,player:get_player_name())
         end

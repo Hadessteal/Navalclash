@@ -78,7 +78,10 @@ void fillConstructMeshData(
     const ClientConstructArticulationState *articulations,
     std::optional<ConstructArticulationId> only_joint = std::nullopt)
 {
-    const MapNode lit_air(CONTENT_AIR, 0xff, 0);
+    // Use daylight-only ambient air for construct mesh baking. 0xff makes
+    // every launched block look emissive because both day and night light are
+    // forced to maximum.
+    const MapNode lit_air(CONTENT_AIR, 0x0f, 0);
     const u32 volume = data.m_vmanip.m_area.getVolume();
     for (u32 index = 0; index < volume; ++index) {
         data.m_vmanip.m_data[index] = lit_air;
@@ -613,7 +616,10 @@ void ClientConstructScene::rebuildSection(
         if (!mesh_node)
             throw std::runtime_error("failed to create NavyCraft MapBlockMesh scene node");
         mesh_node->setPosition(section_offset);
-        mesh_node->setAutomaticCulling(scene::EAC_BOX);
+        // Construct section meshes are parented under a moving/rotating root.
+        // Irrlicht box culling can drop sections when the ship origin or yaw
+        // moves the local mesh bounds away from the camera frustum test.
+        mesh_node->setAutomaticCulling(scene::EAC_OFF);
         rendered.nodes.push_back(mesh_node);
     }
 
@@ -696,7 +702,7 @@ void ClientConstructScene::rebuildArticulations(
                         throw std::runtime_error(
                             "failed to create NavyCraft articulation mesh scene node");
                     mesh_node->setPosition(section_offset);
-                    mesh_node->setAutomaticCulling(scene::EAC_BOX);
+                    mesh_node->setAutomaticCulling(scene::EAC_OFF);
                     section_scene.nodes.push_back(mesh_node);
                 }
                 if (!section_scene.nodes.empty())

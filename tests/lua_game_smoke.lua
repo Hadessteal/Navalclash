@@ -310,6 +310,15 @@ native_projectile_events={{event="impact",projectile={
 local impact_events=navycraft.projectiles.step(.05);assert(#impact_events==1,"M4I impact event was not processed")
 assert(damaged_entry.destroyed,"M4I native construct damage was not mirrored")
 assert(target_player:get_hp()<20,"M4I authoritative blast did not damage nearby player")
+local partial_entry=craft.nodes[12];assert(partial_entry and not partial_entry.destroyed,"partial damage test node missing")
+local hp_before=partial_entry.hp or partial_entry.max_hp or 0
+local _,partial_removed,partial_details=navycraft.preview.apply_native_damage(craft.native_id,{{
+    construct_id=craft.native_id,node_pos=deepcopy(partial_entry.local_pos),node_name=partial_entry.name,
+    distance=0,effective_power=1,armour=10,destroyed=false,breached=false,
+}},craft.position,"Brett","shell")
+assert(partial_removed==0,"partial native damage should not remove armored block")
+assert(partial_details and partial_details.damaged>0,"partial native damage was not recorded")
+assert((partial_entry.hp or hp_before)<hp_before and not partial_entry.destroyed,"partial native damage did not reduce block HP")
 craft.forward_speed=0;craft.vertical_speed=0;craft.yaw_rate=0
 local stored,smsg=navycraft.storage.store("Brett","Smoke Ship");assert(stored,smsg)
 local spawned,newid=navycraft.storage.spawn("Brett","Smoke Ship",{x=0,y=3,z=0},0);assert(spawned,newid)
@@ -319,6 +328,19 @@ assert(navycraft.preview.get_by_id(newid),"stored craft did not respawn")
 local shooter=navycraft.preview.get_by_id(newid);assert(shooter,"M4J shooter missing")
 local spawned_target,target_id=navycraft.storage.spawn("Brett","Smoke Ship",{x=20,y=3,z=0},0,{allow_multiple=true,runtime_owner="TargetRuntime"});assert(spawned_target,target_id)
 local target=navycraft.preview.get_by_id(target_id);assert(target,"M4J target missing")
+local damage_snapshot=navycraft.preview.snapshot(target)
+local damage_id,damage_error=navycraft.preview.spawn_snapshot("DamageRuntime",damage_snapshot,{x=120,y=1,z=120},0,{allow_multiple=true})
+assert(damage_id,damage_error)
+local damage_craft=navycraft.preview.get_by_id(damage_id);assert(damage_craft,"damage craft missing")
+damage_craft.systems.pump_on=false
+local damage_results=navycraft.preview.damage_radius(damage_craft.position,6,35,"Brett","torpedo")
+local saw_damage=false
+for _,result in ipairs(damage_results or {})do if result.id==damage_craft.id and (result.removed or 0)>0 then saw_damage=true end end
+assert(saw_damage,"torpedo radius damage did not remove any ship blocks")
+assert((damage_craft.systems.breach_count or 0)>0,"torpedo damage did not create hull breaches")
+assert((damage_craft.systems.flooding or 0)>0,"breached ship did not start flooding")
+for _=1,60 do navycraft.systems.step(damage_craft,.25)end
+assert(damage_craft.systems.sinking,"breached and flooded ship did not enter sinking state")
 -- Stored snapshots still use the stock-renderer fallback in this isolated smoke harness;
 -- attach mock native IDs so the M4J server API path can be exercised directly.
 shooter.native_id=core.create_dynamic_construct({origin=shooter.position,nodes={}})
@@ -630,14 +652,33 @@ local function run_m5g_smoke()
  assert(math.abs((ui_vessel.systems.throttle or 0)-.5)<.001,"M5G helm control did not reach the vessel")
  local tutorial_state=navycraft.campaign.tutorial.get("Brett");assert(tutorial_state.completed,"M5G guided tutorial did not complete")
  navycraft.campaign.hud.rebuild("Brett");navycraft.campaign.hud.refresh("Brett")
- local hud_count=0;for _ in pairs(brett.huds)do hud_count=hud_count+1 end;assert(hud_count>=4,"M5G role-aware HUD elements were not created")
+ local hud_count=0;for _ in pairs(brett.huds)do hud_count=hud_count+1 end;assert(hud_count>=8,"M5G role-aware HUD elements were not created")
+ local top_left_hud=false;local header=false;local vessel_readout=false;local damage_readout=false;local drive_readout=false
+ for _,def in pairs(brett.huds)do
+  if def.type=="text"and def.position and def.position.x<.1 and def.position.y<.15 and def.alignment and def.alignment.x==1 then top_left_hud=true end
+  if def.text and def.text:find("NAVALCLASH",1,true)then header=true end
+  if def.text and def.text:find("SPD",1,true)and def.text:find("HDG",1,true)then vessel_readout=true end
+  if def.text and def.text:find("HULL [",1,true)and def.text:find("FLOOD",1,true)then damage_readout=true end
+  if def.text and def.text:find("GEAR",1,true)and def.text:find("POWER",1,true)then drive_readout=true end
+ end
+ assert(top_left_hud,"M5G HUD text was not anchored at the top left")
+ assert(header and vessel_readout and damage_readout and drive_readout,"M5G game HUD readouts were not populated")
  assert(navycraft.campaign.presentation.set("Brett","high_contrast",true));assert(navycraft.campaign.presentation.set("Brett","large_text",true));navycraft.campaign.hud.rebuild("Brett")
  local pref=navycraft.campaign.presentation.get("Brett");assert(pref.high_contrast and pref.large_text,"M5G accessibility settings were not persisted")
  assert(navycraft.campaign.notifications.push("Brett","critical","Test collision alarm",{cooldown=0,duration=10}),"M5G notification was rejected")
- navycraft.campaign.hud.refresh("Brett");local found=false;for _,def in pairs(brett.huds)do if def.text=="Test collision alarm"then found=true end end;assert(found,"M5G alert was not surfaced on the HUD")
+ navycraft.campaign.hud.refresh("Brett");local found=false;for _,def in pairs(brett.huds)do if def.text and def.text:find("Test collision alarm",1,true)then found=true end end;assert(found,"M5G alert was not surfaced on the HUD")
  assert(#navycraft.campaign.notifications.history("Brett")>=1,"M5G notification history is empty")
 end
 run_m5g_smoke()
+
+local conversion_snapshot=navycraft.preview.snapshot(craft)
+local conversion_id,conversion_error=navycraft.preview.spawn_snapshot("ConversionSmoke",conversion_snapshot,{x=1000,y=5,z=1000},0,{allow_multiple=true})
+assert(conversion_id,conversion_error)
+local conversion_construct=navycraft.preview.get_by_id(conversion_id);assert(conversion_construct,"helm conversion smoke construct missing")
+local first_entry=conversion_construct.nodes[1];local restored_pos=vector.round(vector.add(conversion_construct.position,first_entry.local_pos))
+local convert_ok,convert_message=navycraft.preview.request_convert_to_blocks(conversion_construct,"Brett");assert(convert_ok,convert_message)
+assert(not navycraft.preview.get_by_id(conversion_id),"helm conversion did not remove active construct")
+assert(core.get_node_or_nil(restored_pos).name==first_entry.name,"helm conversion did not restore editable blocks")
 
 -- Exercise the M4H native construct-attached effect adapter.
 craft.native_id="901"
