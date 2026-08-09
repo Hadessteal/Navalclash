@@ -19,6 +19,7 @@ def assert_applied_overlay(root: Path) -> None:
     gameui_cpp = (root / "src" / "client" / "gameui.cpp").read_text(encoding="utf-8")
     localplayer_cpp = (root / "src" / "client" / "localplayer.cpp").read_text(encoding="utf-8")
     chat_console_cpp = (root / "src" / "gui" / "guiChatConsole.cpp").read_text(encoding="utf-8")
+    chat_console_h = (root / "src" / "gui" / "guiChatConsole.h").read_text(encoding="utf-8")
     server_h = (root / "src" / "server.h").read_text(encoding="utf-8")
     server_packets = (root / "src" / "network" / "serverpackethandler.cpp").read_text(encoding="utf-8")
     server_cpp = (root / "src" / "server.cpp").read_text(encoding="utf-8")
@@ -75,9 +76,17 @@ def assert_applied_overlay(root: Path) -> None:
     assert client_cpp.count('#include "navycraft/client/client_construct_effects.h"') == 1
     assert client_cpp.count('#include "navycraft/client/client_construct_scene.h"') == 1
     assert "prepareNavyCraftLocalPlayerForPhysics" not in client_cpp
-    assert "const s32 hotbar_clearance = 62;" in gameui_cpp
-    assert "window_size.Y - hotbar_clearance - chat_height" in gameui_cpp
-    assert "m_screensize.Y - m_height" in chat_console_cpp
+    assert '#include "navycraft/chat_style.h"' in gameui_cpp
+    assert "navycraft::currentChatStyle()" in gameui_cpp
+    assert "style.recent_font_mode == navycraft::ChatFontMode::Standard" in gameui_cpp
+    assert "style.recent_anchor == navycraft::ChatAnchor::BottomLeft" in gameui_cpp
+    assert '#include "navycraft/chat_style.h"' in chat_console_cpp
+    assert "GUIChatConsole::applyNavyCraftChatStyle()" in chat_console_cpp
+    assert "navycraftConsoleRect" in chat_console_cpp
+    assert "navycraftFontMode(style.console_font_mode, FM_Mono)" in chat_console_cpp
+    assert "AbsoluteRect.UpperLeftCorner" in chat_console_cpp
+    assert "m_navycraft_style_revision" in chat_console_h
+    assert "m_screensize.Y - m_height" not in chat_console_cpp
     assert localplayer_cpp.count("beginNavyCraftLocalPlayerMove") == 1
     assert localplayer_cpp.count("finishNavyCraftLocalPlayerMove") == 1
     begin_index = localplayer_cpp.index("beginNavyCraftLocalPlayerMove")
@@ -164,6 +173,9 @@ def assert_applied_overlay(root: Path) -> None:
     assert "step_dynamic_construct_liquids" in script_api
     assert "get_dynamic_construct_liquids" in script_api
     assert "register_dynamic_construct_special_node" in script_api
+    assert "set_chat_style" in script_api
+    assert "get_chat_style" in script_api
+    assert "fontModeName" in script_api
     assert "lua_pushinteger(L, 16)" in script_api
     assert 'registerFunction(L, "step_dynamic_constructs"' not in script_api
 
@@ -388,6 +400,7 @@ with tempfile.TemporaryDirectory(prefix="navycraft-overlay-") as directory:
         encoding="utf-8",
     )
     (root / "src" / "client" / "gameui.cpp").write_text(
+        '#include "version.h"\n\n'
         "void GameUI::updateChatSize()\n"
         "{\n"
         "\t// Update gui element size and position\n"
@@ -427,12 +440,176 @@ with tempfile.TemporaryDirectory(prefix="navycraft-overlay-") as directory:
         encoding="utf-8",
     )
     (root / "src" / "gui" / "guiChatConsole.cpp").write_text(
+        '#include "util/string.h"\n\n'
+        "inline u32 getScrollbarSize(IGUIEnvironment* env)\n"
+        "{\n"
+        "\treturn env->getSkin()->getSize(gui::EGDS_SCROLLBAR_SIZE);\n"
+        "}\n\n"
+        "void GUIChatConsole::setCursor(\n"
+        "\tbool visible, bool blinking, f32 blink_speed, f32 relative_height)\n"
+        "{\n"
+        "\tif (visible)\n"
+        "\t{\n"
+        "\t\tif (blinking)\n"
+        "\t\t{\n"
+        "\t\t\t// leave m_cursor_blink unchanged\n"
+        "\t\t\tm_cursor_blink_speed = blink_speed;\n"
+        "\t\t}\n"
+        "\t\telse\n"
+        "\t\t{\n"
+        "\t\t\tm_cursor_blink = 0x8000;  // on\n"
+        "\t\t\tm_cursor_blink_speed = 0.0;\n"
+        "\t\t}\n"
+        "\t}\n"
+        "\telse\n"
+        "\t{\n"
+        "\t\tm_cursor_blink = 0;  // off\n"
+        "\t\tm_cursor_blink_speed = 0.0;\n"
+        "\t}\n"
+        "\tm_cursor_height = relative_height;\n"
+        "}\n\n"
+        "void GUIChatConsole::draw()\n"
+        "{\n"
+        "\tif(!IsVisible)\n"
+        "\t\treturn;\n\n"
+        "\tvideo::IVideoDriver* driver = Environment->getVideoDriver();\n"
+        "\tv2u32 screensize = driver->getScreenSize();\n"
+        "\tif (screensize != m_screensize)\n"
+        "\t{\n"
+        "\t\tm_screensize = screensize;\n"
+        "\t\treformatConsole();\n"
+        "\t} else if (!m_scrollbar->getAbsolutePosition().isPointInside(core::vector2di(screensize.X, m_height))) {\n"
+        "\t\tupdateScrollbar(true);\n"
+        "\t}\n\n"
+        "\t// Animation\n"
+        "\tu64 now = porting::getTimeMs();\n"
+        "\tanimate(now - m_animate_time_old);\n"
+        "}\n\n"
+        "void GUIChatConsole::reformatConsole()\n"
+        "{\n"
+        "\ts32 cols = m_screensize.X / m_fontsize.X - 2; // make room for a margin (looks better)\n"
+        "\ts32 rows = m_desired_height / m_fontsize.Y - 1; // make room for the input prompt\n"
+        "\tif (cols <= 0 || rows <= 0)\n"
+        "\t\tcols = rows = 0;\n\n"
+        "\tupdateScrollbar(true);\n\n"
+        "\trecalculateConsolePosition();\n"
+        "\tm_chat_backend->reformat(cols, rows);\n"
+        "}\n\n"
         "void GUIChatConsole::recalculateConsolePosition()\n"
         "{\n"
         "\tcore::rect<s32> rect(0, 0, m_screensize.X, m_height);\n"
         "\tDesiredRect = rect;\n"
         "\trecalculateAbsolutePosition(false);\n"
+        "}\n\n"
+        "void GUIChatConsole::drawBackground()\n"
+        "{\n"
+        "\tvideo::IVideoDriver* driver = Environment->getVideoDriver();\n"
+        "\tif (m_background != NULL)\n"
+        "\t{\n"
+        "\t\tcore::rect<s32> sourcerect(0, -m_height, m_screensize.X, 0);\n"
+        "\t\tdriver->draw2DImage(\n"
+        "\t\t\tm_background,\n"
+        "\t\t\tv2s32(0, 0),\n"
+        "\t\t\tsourcerect,\n"
+        "\t\t\t&AbsoluteClippingRect,\n"
+        "\t\t\tm_background_color,\n"
+        "\t\t\tfalse);\n"
+        "\t}\n"
+        "\telse\n"
+        "\t{\n"
+        "\t\tdriver->draw2DRectangle(\n"
+        "\t\t\tm_background_color,\n"
+        "\t\t\tcore::rect<s32>(0, 0, m_screensize.X, m_height),\n"
+        "\t\t\t&AbsoluteClippingRect);\n"
+        "\t}\n"
+        "}\n\n"
+        "void GUIChatConsole::drawText()\n"
+        "{\n"
+        "\tif (!m_font)\n"
+        "\t\treturn;\n\n"
+        "\tChatBuffer& buf = m_chat_backend->getConsoleBuffer();\n\n"
+        "\tcore::recti rect;\n"
+        "\tif (m_scrollbar->isVisible())\n"
+        "\t\trect = core::rect<s32> (0, 0, m_screensize.X - getScrollbarSize(Environment), m_height);\n"
+        "\telse\n"
+        "\t\trect = AbsoluteClippingRect;\n\n"
+        "\tfor (u32 row = 0; row < buf.getRows(); ++row)\n"
+        "\t{\n"
+        "\t\tconst ChatFormattedLine& line = buf.getFormattedLine(row);\n"
+        "\t\ts32 line_height = m_fontsize.Y;\n"
+        "\t\ts32 y = row * line_height + m_height - m_desired_height;\n"
+        "\t\tif (y + line_height < 0)\n"
+        "\t\t\tcontinue;\n"
+        "\t\tfor (const ChatFormattedFragment &fragment : line.fragments) {\n"
+        "\t\t\ts32 x = (fragment.column + 1) * m_fontsize.X;\n"
+        "\t\t\tcore::rect<s32> destrect(\n"
+        "\t\t\t\tx, y, x + m_fontsize.X * fragment.text.size(), y + m_fontsize.Y);\n"
+        "\t\t\tm_font->draw(\n"
+        "\t\t\t\tfragment.text.c_str(),\n"
+        "\t\t\t\tdestrect,\n"
+        "\t\t\t\tvideo::SColor(255, 255, 255, 255),\n"
+        "\t\t\t\tfalse,\n"
+        "\t\t\t\tfalse,\n"
+        "\t\t\t\t&rect);\n"
+        "\t\t}\n"
+        "\t}\n"
+        "}\n\n"
+        "void GUIChatConsole::drawPrompt()\n"
+        "{\n"
+        "\tif (!m_font)\n"
+        "\t\treturn;\n\n"
+        "\tChatPrompt& prompt = m_chat_backend->getPrompt();\n"
+        "\tstd::wstring prompt_text = prompt.getVisiblePortion();\n\n"
+        "\tu32 font_width  = m_fontsize.X;\n"
+        "\tu32 font_height = m_fontsize.Y;\n\n"
+        "\tcore::dimension2d<u32> size = m_font->getDimension(prompt_text.c_str());\n"
+        "\tu32 text_width = size.Width;\n"
+        "\tif (size.Height > font_height)\n"
+        "\t\tfont_height = size.Height;\n\n"
+        "\tu32 row = m_chat_backend->getConsoleBuffer().getRows();\n"
+        "\ts32 y = row * font_height + m_height - m_desired_height;\n\n"
+        "\tcore::rect<s32> destrect(\n"
+        "\t\tfont_width, y, font_width + text_width, y + font_height);\n"
+        "\tm_font->draw(\n"
+        "\t\tprompt_text.c_str(),\n"
+        "\t\tdestrect,\n"
+        "\t\tvideo::SColor(255, 255, 255, 255),\n"
+        "\t\tfalse,\n"
+        "\t\tfalse,\n"
+        "\t\t&AbsoluteClippingRect);\n\n"
+        "\ts32 cursor_pos = prompt.getVisibleCursorPosition();\n"
+        "\tu32 text_to_cursor_pos_width = m_font->getDimension(prompt_text.substr(0, cursor_pos).c_str()).Width;\n"
+        "\ts32 x = font_width + text_to_cursor_pos_width;\n"
+        "}\n\n"
+        "bool GUIChatConsole::OnEvent(const SEvent& event)\n"
+        "{\n"
+        "\tif (event.MouseInput.Y / m_fontsize.Y < (m_height / m_fontsize.Y) - 1 )\n"
+        "\t{\n"
+        "\t\t// Translate pixel position to font position\n"
+        "\t\tweblinkClick(event.MouseInput.X / m_fontsize.X,\n"
+        "\t\t\t\tevent.MouseInput.Y / m_fontsize.Y);\n"
+        "\t}\n"
+        "\treturn false;\n"
+        "}\n\n"
+        "void GUIChatConsole::updateScrollbar(bool update_size)\n"
+        "{\n"
+        "\tChatBuffer &buf = m_chat_backend->getConsoleBuffer();\n"
+        "\tm_scrollbar->setPageSize(m_fontsize.Y * buf.getLineCount());\n"
+        "\tif (update_size) {\n"
+        "\t\tconst core::rect<s32> rect (m_screensize.X - getScrollbarSize(Environment), 0, m_screensize.X, m_height);\n"
+        "\t\tm_scrollbar->setRelativePosition(rect);\n"
+        "\t}\n"
         "}\n",
+        encoding="utf-8",
+    )
+    (root / "src" / "gui" / "guiChatConsole.h").write_text(
+        "class GUIChatConsole {\n"
+        "private:\n"
+        "\tvoid reformatConsole();\n"
+        "\tvoid recalculateConsolePosition();\n"
+        "\t// console open/close animation speed [screen height fraction / second]\n"
+        "\tf32 m_height_speed = 5.0f;\n"
+        "};\n",
         encoding="utf-8",
     )
     (root / "src" / "client" / "mapblock_mesh.h").write_text(

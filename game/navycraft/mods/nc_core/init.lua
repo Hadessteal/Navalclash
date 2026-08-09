@@ -13,6 +13,7 @@ navycraft.construct_state = construct_state
 -- construct state, not a renderer or movement fallback.
 navycraft.preview = construct_state
 navycraft.construct_visuals = dofile(modpath .. "/construct_visuals.lua")
+navycraft.chat_style = dofile(modpath .. "/chat_style.lua")
 -- Rider contact, collision and platform displacement are native-engine
 -- responsibilities. The former Lua rider-safety teleporter is deliberately
 -- not loaded in native builds.

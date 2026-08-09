@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 set(navycraft_SRCS
+    ${CMAKE_CURRENT_SOURCE_DIR}/chat_style.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/construct/dynamic_construct.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/construct/construct_node_state.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/construct/construct_registry.cpp

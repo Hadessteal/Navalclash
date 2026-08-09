@@ -8,6 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(navycraft_construct_core_sources
+    ../engine-overlay/src/navycraft/chat_style.cpp
     ../engine-overlay/src/navycraft/construct/dynamic_construct.cpp
     ../engine-overlay/src/navycraft/construct/construct_node_state.cpp
     ../engine-overlay/src/navycraft/construct/construct_registry.cpp

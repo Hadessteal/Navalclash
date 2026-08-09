@@ -15,6 +15,7 @@
 #include "construct/construct_interaction.h"
 #include "construct/construct_persistence.h"
 #include "construct/construct_serialization.h"
+#include "chat_style.h"
 #include "network/construct_replication_queue.h"
 #include "server.h"
 
@@ -300,6 +301,226 @@ bool readBoolField(lua_State *L, int table_index, const char *name, bool fallbac
     const bool value = lua_isnil(L, -1) ? fallback : lua_toboolean(L, -1) != 0;
     lua_pop(L, 1);
     return value;
+}
+
+int readIntField(lua_State *L, int table_index, const char *name, int fallback,
+    int minimum, int maximum)
+{
+    const double value = readNumberField(L, table_index, name, fallback);
+    if (!std::isfinite(value))
+        return fallback;
+    const int rounded = static_cast<int>(std::lround(value));
+    return std::max(minimum, std::min(maximum, rounded));
+}
+
+void pushString(lua_State *L, const char *value)
+{
+    lua_pushlstring(L, value, std::char_traits<char>::length(value));
+}
+
+const char *anchorName(navycraft::ChatAnchor anchor)
+{
+    return anchor == navycraft::ChatAnchor::BottomLeft ? "bottom_left" : "top_left";
+}
+
+const char *fontModeName(navycraft::ChatFontMode mode)
+{
+    switch (mode) {
+    case navycraft::ChatFontMode::Standard:
+        return "standard";
+    case navycraft::ChatFontMode::Mono:
+        return "mono";
+    case navycraft::ChatFontMode::Default:
+        break;
+    }
+    return "default";
+}
+
+navycraft::ChatAnchor readAnchorField(lua_State *L, int table_index, const char *name,
+    navycraft::ChatAnchor fallback)
+{
+    getField(L, table_index, name);
+    if (lua_isnil(L, -1)) {
+        lua_pop(L, 1);
+        return fallback;
+    }
+    if (!lua_isstring(L, -1)) {
+        lua_pop(L, 1);
+        throw std::invalid_argument("chat anchor must be a string");
+    }
+    const std::string value = lua_tostring(L, -1);
+    lua_pop(L, 1);
+    if (value == "top_left" || value == "top")
+        return navycraft::ChatAnchor::TopLeft;
+    if (value == "bottom_left" || value == "bottom")
+        return navycraft::ChatAnchor::BottomLeft;
+    throw std::invalid_argument("chat anchor must be top_left or bottom_left");
+}
+
+navycraft::ChatFontMode readFontModeField(lua_State *L, int table_index, const char *name,
+    navycraft::ChatFontMode fallback)
+{
+    getField(L, table_index, name);
+    if (lua_isnil(L, -1)) {
+        lua_pop(L, 1);
+        return fallback;
+    }
+    if (!lua_isstring(L, -1)) {
+        lua_pop(L, 1);
+        throw std::invalid_argument("chat font mode must be a string");
+    }
+    const std::string value = lua_tostring(L, -1);
+    lua_pop(L, 1);
+    if (value == "default" || value == "unspecified")
+        return navycraft::ChatFontMode::Default;
+    if (value == "standard" || value == "regular")
+        return navycraft::ChatFontMode::Standard;
+    if (value == "mono" || value == "monospace")
+        return navycraft::ChatFontMode::Mono;
+    throw std::invalid_argument("chat font mode must be default, standard, or mono");
+}
+
+navycraft::ChatColor readColorField(lua_State *L, int table_index, const char *name,
+    navycraft::ChatColor fallback)
+{
+    getField(L, table_index, name);
+    if (lua_isnil(L, -1)) {
+        lua_pop(L, 1);
+        return fallback;
+    }
+    if (!lua_istable(L, -1)) {
+        lua_pop(L, 1);
+        throw std::invalid_argument("chat color must be a table");
+    }
+    navycraft::ChatColor color = fallback;
+    color.enabled = readBoolField(L, -1, "enabled", true);
+    color.alpha = readIntField(L, -1, "a", readIntField(L, -1, "alpha",
+        color.alpha, 0, 255), 0, 255);
+    color.red = readIntField(L, -1, "r", readIntField(L, -1, "red",
+        color.red, 0, 255), 0, 255);
+    color.green = readIntField(L, -1, "g", readIntField(L, -1, "green",
+        color.green, 0, 255), 0, 255);
+    color.blue = readIntField(L, -1, "b", readIntField(L, -1, "blue",
+        color.blue, 0, 255), 0, 255);
+    lua_pop(L, 1);
+    return color;
+}
+
+void readRecentChatStyle(lua_State *L, int table_index, navycraft::ChatStyle &style)
+{
+    style.recent_anchor = readAnchorField(L, table_index, "anchor", style.recent_anchor);
+    style.recent_margin_left = readIntField(L, table_index, "margin_left",
+        style.recent_margin_left, 0, 1000);
+    style.recent_margin_right = readIntField(L, table_index, "margin_right",
+        style.recent_margin_right, 0, 1000);
+    style.recent_margin_top = readIntField(L, table_index, "margin_top",
+        style.recent_margin_top, 0, 1000);
+    style.recent_margin_bottom = readIntField(L, table_index, "margin_bottom",
+        style.recent_margin_bottom, 0, 1000);
+    style.recent_font_mode = readFontModeField(L, table_index, "font",
+        readFontModeField(L, table_index, "font_mode", style.recent_font_mode));
+    style.recent_font_size = readIntField(L, table_index, "font_size",
+        style.recent_font_size, 0, 72);
+    style.recent_line_spacing = readIntField(L, table_index, "line_spacing",
+        style.recent_line_spacing, 0, 32);
+    style.recent_text_color = readColorField(L, table_index, "text_color",
+        style.recent_text_color);
+}
+
+void readConsoleChatStyle(lua_State *L, int table_index, navycraft::ChatStyle &style)
+{
+    style.console_anchor = readAnchorField(L, table_index, "anchor", style.console_anchor);
+    style.console_margin_left = readIntField(L, table_index, "margin_left",
+        style.console_margin_left, 0, 1000);
+    style.console_margin_right = readIntField(L, table_index, "margin_right",
+        style.console_margin_right, 0, 1000);
+    style.console_margin_top = readIntField(L, table_index, "margin_top",
+        style.console_margin_top, 0, 1000);
+    style.console_margin_bottom = readIntField(L, table_index, "margin_bottom",
+        style.console_margin_bottom, 0, 1000);
+    style.console_font_mode = readFontModeField(L, table_index, "font",
+        readFontModeField(L, table_index, "font_mode", style.console_font_mode));
+    style.console_font_size = readIntField(L, table_index, "font_size",
+        style.console_font_size, 0, 72);
+    style.console_line_spacing = readIntField(L, table_index, "line_spacing",
+        style.console_line_spacing, 0, 32);
+    style.console_height_speed = static_cast<float>(readNumberField(L, table_index,
+        "height_speed", style.console_height_speed));
+    if (!std::isfinite(style.console_height_speed) || style.console_height_speed <= 0.0f)
+        style.console_height_speed = 5.0f;
+    style.console_text_color = readColorField(L, table_index, "text_color",
+        style.console_text_color);
+    style.prompt_text_color = readColorField(L, table_index, "prompt_color",
+        style.prompt_text_color);
+    style.console_background_color = readColorField(L, table_index, "background_color",
+        style.console_background_color);
+}
+
+void pushColor(lua_State *L, const navycraft::ChatColor &color)
+{
+    lua_createtable(L, 0, 5);
+    lua_pushboolean(L, color.enabled);
+    lua_setfield(L, -2, "enabled");
+    lua_pushinteger(L, color.alpha);
+    lua_setfield(L, -2, "a");
+    lua_pushinteger(L, color.red);
+    lua_setfield(L, -2, "r");
+    lua_pushinteger(L, color.green);
+    lua_setfield(L, -2, "g");
+    lua_pushinteger(L, color.blue);
+    lua_setfield(L, -2, "b");
+}
+
+void pushRecentChatStyle(lua_State *L, const navycraft::ChatStyle &style)
+{
+    lua_createtable(L, 0, 9);
+    pushString(L, anchorName(style.recent_anchor));
+    lua_setfield(L, -2, "anchor");
+    lua_pushinteger(L, style.recent_margin_left);
+    lua_setfield(L, -2, "margin_left");
+    lua_pushinteger(L, style.recent_margin_right);
+    lua_setfield(L, -2, "margin_right");
+    lua_pushinteger(L, style.recent_margin_top);
+    lua_setfield(L, -2, "margin_top");
+    lua_pushinteger(L, style.recent_margin_bottom);
+    lua_setfield(L, -2, "margin_bottom");
+    pushString(L, fontModeName(style.recent_font_mode));
+    lua_setfield(L, -2, "font");
+    lua_pushinteger(L, style.recent_font_size);
+    lua_setfield(L, -2, "font_size");
+    lua_pushinteger(L, style.recent_line_spacing);
+    lua_setfield(L, -2, "line_spacing");
+    pushColor(L, style.recent_text_color);
+    lua_setfield(L, -2, "text_color");
+}
+
+void pushConsoleChatStyle(lua_State *L, const navycraft::ChatStyle &style)
+{
+    lua_createtable(L, 0, 12);
+    pushString(L, anchorName(style.console_anchor));
+    lua_setfield(L, -2, "anchor");
+    lua_pushinteger(L, style.console_margin_left);
+    lua_setfield(L, -2, "margin_left");
+    lua_pushinteger(L, style.console_margin_right);
+    lua_setfield(L, -2, "margin_right");
+    lua_pushinteger(L, style.console_margin_top);
+    lua_setfield(L, -2, "margin_top");
+    lua_pushinteger(L, style.console_margin_bottom);
+    lua_setfield(L, -2, "margin_bottom");
+    pushString(L, fontModeName(style.console_font_mode));
+    lua_setfield(L, -2, "font");
+    lua_pushinteger(L, style.console_font_size);
+    lua_setfield(L, -2, "font_size");
+    lua_pushinteger(L, style.console_line_spacing);
+    lua_setfield(L, -2, "line_spacing");
+    lua_pushnumber(L, style.console_height_speed);
+    lua_setfield(L, -2, "height_speed");
+    pushColor(L, style.console_text_color);
+    lua_setfield(L, -2, "text_color");
+    pushColor(L, style.prompt_text_color);
+    lua_setfield(L, -2, "prompt_color");
+    pushColor(L, style.console_background_color);
+    lua_setfield(L, -2, "background_color");
 }
 
 std::optional<navycraft::ConstructNode> readOptionalNodeField(
@@ -3090,8 +3311,45 @@ int ModApiNavyCraft::l_get_dynamic_construct_protocol_version(lua_State *L)
     return 1;
 }
 
+int ModApiNavyCraft::l_set_chat_style(lua_State *L)
+{
+    try {
+        if (!lua_istable(L, 1))
+            throw std::invalid_argument("chat style must be a table");
+        navycraft::ChatStyle style = navycraft::currentChatStyle();
+        getField(L, 1, "recent");
+        if (lua_istable(L, -1))
+            readRecentChatStyle(L, -1, style);
+        lua_pop(L, 1);
+        getField(L, 1, "console");
+        if (lua_istable(L, -1))
+            readConsoleChatStyle(L, -1, style);
+        lua_pop(L, 1);
+        navycraft::setChatStyle(std::move(style));
+        lua_pushboolean(L, true);
+        return 1;
+    } catch (const std::exception &error) {
+        return fail(L, error.what());
+    }
+}
+
+int ModApiNavyCraft::l_get_chat_style(lua_State *L)
+{
+    const navycraft::ChatStyle style = navycraft::currentChatStyle();
+    lua_createtable(L, 0, 3);
+    lua_pushnumber(L, static_cast<lua_Number>(style.revision));
+    lua_setfield(L, -2, "revision");
+    pushRecentChatStyle(L, style);
+    lua_setfield(L, -2, "recent");
+    pushConsoleChatStyle(L, style);
+    lua_setfield(L, -2, "console");
+    return 1;
+}
+
 void ModApiNavyCraft::Initialize(lua_State *L, int top)
 {
+    registerFunction(L, "set_chat_style", l_set_chat_style, top);
+    registerFunction(L, "get_chat_style", l_get_chat_style, top);
     registerFunction(L, "create_dynamic_construct", l_create_dynamic_construct, top);
     registerFunction(L, "get_dynamic_construct", l_get_dynamic_construct, top);
     registerFunction(L, "set_dynamic_construct_transform", l_set_dynamic_construct_transform, top);

@@ -67,6 +67,8 @@ private:
     static int l_step_dynamic_construct_liquids(lua_State *L);
     static int l_get_dynamic_construct_liquids(lua_State *L);
     static int l_register_dynamic_construct_special_node(lua_State *L);
+    static int l_set_chat_style(lua_State *L);
+    static int l_get_chat_style(lua_State *L);
 
 public:
     static void Initialize(lua_State *L, int top);
